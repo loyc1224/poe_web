@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Path of Exile Information Hub</h1>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/classes">Classes</a>
+                <a href="/leagues">Leagues</a>
+                <a href="/skills">Skills Table</a>
+            </nav>
+            <form action="/search" method="get">
+                <input type="text" name="q" placeholder="Search...">
+                <button type="submit">Search</button>
+            </form>
+        </header>
+        
+        <main>
+            <h2>Welcome to POE Info</h2>
+            <p>This is a simple web application to display information about Path of Exile.</p>
+            <p>Current Game Version: {{ poe_data.latest_version }}</p>
+            
+            <div class="quick-links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="/classes">View Character Classes</a></li>
+                    <li><a href="/leagues">View Leagues</a></li>
+                    <li><a href="/skills">View Skills Table</a></li>
+                </ul>
+            </div>
+        </main>
+        
+        <footer>
+            <p>POE Info Web App - Created with Flask</p>
+        </footer>
+    </div>
+</body>
+</html>

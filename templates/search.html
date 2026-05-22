@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Search Results</h1>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/classes">Classes</a>
+                <a href="/leagues">Leagues</a>
+                <a href="/skills">Skills Table</a>
+            </nav>
+            <form action="/search" method="get">
+                <input type="text" name="q" value="{{ query }}" placeholder="Search...">
+                <button type="submit">Search</button>
+            </form>
+        </header>
+        
+        <main>
+            <h2>Results for "{{ query }}"</h2>
+            {% if results %}
+            <div class="results">
+                <ul>
+                {% for result in results %}
+                    <li>{{ result }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <p>No results found.</p>
+            {% endif %}
+        </main>
+        
+        <footer>
+            <p>POE Info Web App - Created with Flask</p>
+        </footer>
+    </div>
+</body>
+</html>

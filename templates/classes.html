@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>POE Character Classes</h1>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/classes">Classes</a>
+                <a href="/leagues">Leagues</a>
+                <a href="/skills">Skills Table</a>
+            </nav>
+        </header>
+        
+        <main>
+            <h2>Available Classes</h2>
+            <div class="grid">
+                {% for class in classes %}
+                <div class="card">
+                    <h3>{{ class }}</h3>
+                    <p>Information about the {{ class }} class in Path of Exile.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+        
+        <footer>
+            <p>POE Info Web App - Created with Flask</p>
+        </footer>
+    </div>
+</body>
+</html>
