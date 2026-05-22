@@ -8,14 +8,20 @@ app = Flask(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 CONTENT_DIR = BASE_DIR / "content"
 
+GAME_LABELS = {
+    "poe1": "Path of Exile 1",
+    "poe2": "Path of Exile 2",
+}
+
 CATEGORY_LABELS = {
     "strategy": "策略",
     "crafting": "做裝",
     "beetle": "甲蟲",
+    "builds": "流派",
 }
 
 
-def get_strategy_title(text: str, fallback: str) -> str:
+def get_doc_title(text: str, fallback: str) -> str:
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
@@ -28,8 +34,8 @@ def render_markdown(text: str) -> str:
     return markdown.markdown(text, extensions=["extra", "tables", "sane_lists"])
 
 
-def make_category_label(name: str) -> str:
-    return CATEGORY_LABELS.get(name, name.replace("-", " ").replace("_", " ").title())
+def make_label(labels: dict, name: str) -> str:
+    return labels.get(name, name.replace("-", " ").replace("_", " ").title())
 
 
 def build_summary(text: str) -> str:
@@ -40,43 +46,57 @@ def build_summary(text: str) -> str:
     return "尚未提供摘要。"
 
 
-def load_categories() -> list[dict[str, object]]:
+def load_games() -> list[dict[str, object]]:
     if not CONTENT_DIR.exists():
         return []
 
-    categories: list[dict[str, object]] = []
-    for category_dir in sorted(path for path in CONTENT_DIR.iterdir() if path.is_dir()):
-        documents: list[dict[str, str]] = []
-        for file_path in sorted(category_dir.glob("*.md")):
-            text = file_path.read_text(encoding="utf-8")
-            title = get_strategy_title(text, file_path.stem)
-            documents.append(
+    games: list[dict[str, object]] = []
+    for game_dir in sorted(path for path in CONTENT_DIR.iterdir() if path.is_dir()):
+        categories: list[dict[str, object]] = []
+        for category_dir in sorted(path for path in game_dir.iterdir() if path.is_dir()):
+            documents: list[dict[str, str]] = []
+            for file_path in sorted(category_dir.glob("*.md")):
+                text = file_path.read_text(encoding="utf-8")
+                title = get_doc_title(text, file_path.stem)
+                doc_id = f"{game_dir.name}-{category_dir.name}-{file_path.stem}"
+                documents.append(
+                    {
+                        "id": doc_id,
+                        "title": title,
+                        "filename": file_path.name,
+                        "game": game_dir.name,
+                        "category": category_dir.name,
+                        "summary": build_summary(text),
+                        "html": render_markdown(text),
+                    }
+                )
+
+            categories.append(
                 {
-                    "id": f"{category_dir.name}-{file_path.stem}",
-                    "title": title,
-                    "filename": file_path.name,
-                    "category": category_dir.name,
-                    "summary": build_summary(text),
-                    "html": render_markdown(text),
+                    "id": f"{game_dir.name}-{category_dir.name}",
+                    "name": category_dir.name,
+                    "label": make_label(CATEGORY_LABELS, category_dir.name),
+                    "game": game_dir.name,
+                    "count": len(documents),
+                    "documents": documents,
                 }
             )
 
-        categories.append(
+        games.append(
             {
-                "id": category_dir.name,
-                "label": make_category_label(category_dir.name),
-                "count": len(documents),
-                "documents": documents,
+                "id": game_dir.name,
+                "label": make_label(GAME_LABELS, game_dir.name),
+                "categories": categories,
             }
         )
 
-    return categories
+    return games
 
 
 @app.route("/")
 def home():
-    categories = load_categories()
-    return render_template("index.html", categories=categories)
+    games = load_games()
+    return render_template("index.html", games=games)
 
 
 @app.route("/health")

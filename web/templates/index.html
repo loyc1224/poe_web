@@ -6,15 +6,19 @@
   <title>POE 知識庫</title>
   <style>
     :root {
-      --bg: #08111f;
-      --panel: rgba(15, 23, 42, 0.92);
-      --panel-soft: rgba(30, 41, 59, 0.86);
-      --line: rgba(148, 163, 184, 0.18);
+      --bg: #06101c;
+      --line: rgba(148, 163, 184, 0.14);
       --text: #e2e8f0;
       --muted: #94a3b8;
-      --accent: #60a5fa;
-      --accent-2: #a78bfa;
-      --shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+      --shadow: 0 24px 80px rgba(0,0,0,0.5);
+      /* POE1 amber */
+      --p1: #f59e0b;
+      --p1-dim: rgba(245,158,11,0.12);
+      --p1-border: rgba(245,158,11,0.3);
+      /* POE2 crystal purple */
+      --p2: #a78bfa;
+      --p2-dim: rgba(167,139,250,0.12);
+      --p2-border: rgba(167,139,250,0.3);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -22,176 +26,293 @@
       margin: 0;
       color: var(--text);
       font-family: "Segoe UI", Arial, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(96,165,250,0.16), transparent 28%),
-        radial-gradient(circle at top right, rgba(167,139,250,0.14), transparent 24%),
-        linear-gradient(180deg, #08111f 0%, #0f172a 100%);
+      background: #06101c;
+      background-image:
+        radial-gradient(ellipse 80% 40% at 20% 0%, rgba(245,158,11,0.08), transparent),
+        radial-gradient(ellipse 60% 50% at 80% 0%, rgba(167,139,250,0.10), transparent),
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 2 L58 17 L58 43 L30 58 L2 43 L2 17Z' fill='none' stroke='rgba(148,163,184,0.04)' stroke-width='1'/%3E%3C/svg%3E");
     }
     .shell {
-      width: min(1600px, calc(100% - 32px));
-      margin: 16px auto;
-      border: 1px solid var(--line);
-      border-radius: 24px;
+      width: min(1600px, calc(100% - 24px));
+      margin: 14px auto 24px;
+      border: 1px solid rgba(148,163,184,0.12);
+      border-radius: 20px;
       overflow: hidden;
-      background: rgba(8, 17, 31, 0.72);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+      background: rgba(6,16,28,0.85);
+      box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.03);
+      backdrop-filter: blur(20px);
     }
+    /* ── HERO ─────────────────────────────── */
     .hero {
-      padding: 28px 32px 18px;
+      position: relative;
+      padding: 0;
       border-bottom: 1px solid var(--line);
-      background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.85));
+      overflow: hidden;
     }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(105deg, rgba(245,158,11,0.18) 0%, transparent 45%),
+        linear-gradient(255deg, rgba(167,139,250,0.18) 0%, transparent 45%),
+        linear-gradient(180deg, #0d1a2e 0%, #06101c 100%);
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='60,4 116,34 116,86 60,116 4,86 4,34' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3Cpolygon points='60,20 100,42 100,78 60,100 20,78 20,42' fill='none' stroke='rgba(255,255,255,0.02)' stroke-width='1'/%3E%3C/svg%3E") repeat;
+      opacity: 0.6;
+    }
+    .hero-inner {
+      position: relative;
+      padding: 32px 36px 26px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .hero-emblem {
+      flex-shrink: 0;
+      width: 72px; height: 72px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px;
+      background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(167,139,250,0.18));
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .hero-text { flex: 1; }
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
+      gap: 6px;
+      padding: 4px 12px;
       border-radius: 999px;
-      background: rgba(96,165,250,0.12);
-      border: 1px solid rgba(96,165,250,0.25);
-      color: #bfdbfe;
-      font-size: 12px;
-      margin-bottom: 14px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.28);
+      color: #fcd34d;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
     }
-    .hero h1 { margin: 0 0 8px; font-size: 34px; }
-    .hero p { margin: 0; color: var(--muted); max-width: 900px; line-height: 1.7; }
+    .hero h1 {
+      margin: 0 0 6px;
+      font-size: 32px;
+      background: linear-gradient(90deg, #fcd34d 0%, #f8fafc 40%, #c4b5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 14px; }
+    /* ── LAYOUT ────────────────────────────── */
     .layout {
       display: grid;
-      grid-template-columns: 260px 360px minmax(0, 1fr);
-      min-height: calc(100vh - 180px);
+      grid-template-columns: 240px 360px minmax(0, 1fr);
+      min-height: calc(100vh - 172px);
     }
-    .sidebar, .list-panel, .viewer {
-      min-width: 0;
-    }
+    .sidebar, .list-panel, .viewer { min-width: 0; }
+    /* ── SIDEBAR ───────────────────────────── */
     .sidebar {
-      padding: 24px 18px;
-      background: rgba(2, 6, 23, 0.35);
+      padding: 20px 14px;
+      background: rgba(2,6,16,0.5);
       border-right: 1px solid var(--line);
-      position: sticky;
-      top: 0;
+      position: sticky; top: 0;
       align-self: start;
-      height: calc(100vh - 180px);
+      height: calc(100vh - 172px);
       overflow: auto;
     }
-    .side-title {
-      margin: 0 0 14px;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
+    .side-section { margin-bottom: 8px; }
+    .side-game-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
+    .side-game-header.poe1 {
+      color: #fcd34d;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+    .side-game-header.poe2 {
+      color: #c4b5fd;
+      background: rgba(167,139,250,0.08);
+      border: 1px solid rgba(167,139,250,0.2);
+    }
+    .side-game-header .game-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .poe1 .game-dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+    .poe2 .game-dot { background: #a78bfa; box-shadow: 0 0 6px #a78bfa; }
     .category-button {
       width: 100%;
-      margin-bottom: 10px;
-      padding: 14px 14px;
-      border-radius: 16px;
+      margin-bottom: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
       border: 1px solid transparent;
       background: transparent;
       color: var(--text);
       cursor: pointer;
       text-align: left;
-      transition: 0.2s ease;
+      transition: 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .category-button:hover,
-    .category-button.active {
-      background: linear-gradient(135deg, rgba(96,165,250,0.15), rgba(167,139,250,0.12));
-      border-color: rgba(96,165,250,0.28);
-      transform: translateY(-1px);
+    .category-button:hover { background: rgba(255,255,255,0.04); }
+    .category-button.active.poe1-cat {
+      background: var(--p1-dim);
+      border-color: var(--p1-border);
     }
+    .category-button.active.poe2-cat {
+      background: var(--p2-dim);
+      border-color: var(--p2-border);
+    }
+    .cat-icon { font-size: 18px; flex-shrink: 0; }
     .category-label-row {
+      flex: 1;
       display: flex;
       justify-content: space-between;
-      gap: 12px;
       align-items: center;
+      gap: 8px;
     }
-    .category-name { font-size: 15px; font-weight: 600; }
+    .category-name { font-size: 14px; font-weight: 600; }
     .category-count {
-      min-width: 28px;
+      min-width: 22px;
       text-align: center;
-      padding: 4px 8px;
+      padding: 2px 7px;
       border-radius: 999px;
-      background: rgba(148,163,184,0.14);
-      color: #cbd5e1;
-      font-size: 12px;
-    }
-    .sidebar-note {
-      margin-top: 22px;
-      padding: 16px;
-      border-radius: 18px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid var(--line);
+      background: rgba(148,163,184,0.12);
       color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 11px;
     }
+    /* ── LIST PANEL ─────────────────────────── */
     .list-panel {
-      padding: 22px 18px;
+      padding: 20px 16px;
       border-right: 1px solid var(--line);
-      background: rgba(15, 23, 42, 0.4);
-      height: calc(100vh - 180px);
+      background: rgba(10,18,32,0.45);
+      height: calc(100vh - 172px);
       overflow: auto;
     }
-    .list-heading { margin: 0 0 6px; font-size: 22px; }
-    .list-subheading { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
-    .card-list { display: grid; gap: 14px; }
+    .list-heading { margin: 0 0 4px; font-size: 20px; }
+    .list-subheading { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+    .card-list { display: grid; gap: 12px; }
     .doc-card {
-      padding: 18px;
-      border-radius: 20px;
+      position: relative;
+      padding: 0;
+      border-radius: 16px;
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(30,41,59,0.84), rgba(15,23,42,0.92));
+      background: rgba(15,25,45,0.8);
       cursor: pointer;
-      transition: 0.2s ease;
+      transition: 0.18s ease;
       text-align: left;
       color: inherit;
+      overflow: hidden;
     }
-    .doc-card:hover,
-    .doc-card.active {
-      border-color: rgba(96,165,250,0.34);
-      box-shadow: 0 12px 32px rgba(37,99,235,0.18);
+    .doc-card-accent {
+      height: 4px;
+      width: 100%;
+    }
+    .poe1-card .doc-card-accent {
+      background: linear-gradient(90deg, #f59e0b, #fcd34d, #f59e0b);
+    }
+    .poe2-card .doc-card-accent {
+      background: linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed);
+    }
+    .doc-card-body { padding: 14px 16px 16px; }
+    .doc-card:hover, .doc-card.active {
       transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.3);
     }
-    .doc-card h3 { margin: 0 0 8px; font-size: 17px; }
-    .doc-card p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
-    .doc-meta { margin-top: 12px; color: #93c5fd; font-size: 12px; }
+    .poe1-card:hover, .poe1-card.active {
+      border-color: var(--p1-border);
+      box-shadow: 0 12px 36px rgba(245,158,11,0.12);
+    }
+    .poe2-card:hover, .poe2-card.active {
+      border-color: var(--p2-border);
+      box-shadow: 0 12px 36px rgba(167,139,250,0.12);
+    }
+    .doc-card h3 { margin: 0 0 6px; font-size: 15px; line-height: 1.4; }
+    .doc-card p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 13px; }
+    .doc-meta { margin-top: 10px; font-size: 11px; }
+    .poe1-card .doc-meta { color: #fbbf24; }
+    .poe2-card .doc-meta { color: #c4b5fd; }
+    /* ── VIEWER ─────────────────────────────── */
     .viewer {
-      padding: 30px 32px 40px;
-      height: calc(100vh - 180px);
+      padding: 28px 32px 40px;
+      height: calc(100vh - 172px);
       overflow: auto;
-      background: linear-gradient(180deg, rgba(15,23,42,0.2), rgba(2,6,23,0.35));
+      background: linear-gradient(180deg, rgba(10,18,32,0.1), rgba(2,6,16,0.3));
     }
     .doc-panel { display: none; }
     .doc-panel.active { display: block; }
     .doc-panel .meta {
       display: inline-flex;
-      padding: 8px 12px;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
       border-radius: 999px;
-      margin-bottom: 18px;
-      background: rgba(96,165,250,0.12);
-      border: 1px solid rgba(96,165,250,0.22);
-      color: #bfdbfe;
+      margin-bottom: 20px;
       font-size: 12px;
     }
-    h1, h2, h3 { color: #f8fafc; }
-    .doc-panel h1 { font-size: 32px; margin-top: 0; }
-    .doc-panel h2 {
-      margin-top: 34px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(148,163,184,0.14);
+    .doc-panel .meta.poe1-meta {
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: #fcd34d;
     }
-    .doc-panel p, .doc-panel li { line-height: 1.8; color: #dbe4ef; }
+    .doc-panel .meta.poe2-meta {
+      background: rgba(167,139,250,0.1);
+      border: 1px solid rgba(167,139,250,0.25);
+      color: #c4b5fd;
+    }
+    h1, h2, h3 { color: #f8fafc; }
+    .doc-panel h1 { font-size: 30px; margin-top: 0; }
+    .doc-panel h2 {
+      margin-top: 32px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(148,163,184,0.12);
+    }
+    .doc-panel p, .doc-panel li { line-height: 1.8; color: #d1dbe8; }
     .doc-panel ul, .doc-panel ol { padding-left: 22px; }
+    .doc-panel table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 14px;
+    }
+    .doc-panel th {
+      padding: 10px 14px;
+      background: rgba(30,41,59,0.8);
+      color: #e2e8f0;
+      font-weight: 600;
+      text-align: left;
+      border-bottom: 2px solid rgba(148,163,184,0.2);
+    }
+    .doc-panel td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(148,163,184,0.08);
+      color: #cbd5e1;
+    }
+    .doc-panel tr:hover td { background: rgba(255,255,255,0.03); }
     a { color: #93c5fd; }
     img {
       max-width: 100%;
-      border-radius: 18px;
-      border: 1px solid rgba(148,163,184,0.18);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.26);
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.15);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+      display: block;
+      margin: 16px 0;
     }
     code {
       background: rgba(51,65,85,0.7);
       padding: 2px 8px;
-      border-radius: 8px;
+      border-radius: 6px;
+      font-size: 0.9em;
     }
     pre {
       padding: 16px;
@@ -237,65 +358,87 @@
 <body>
   <div class="shell">
     <header class="hero">
-      <div class="badge">POE 知識庫 · 分類式內容管理</div>
-      <h1>POE 策略 / 做裝中心</h1>
-      <p>左側先選分類，中間會顯示對應文件卡片，右邊則是完整內容。之後你只要把新的 Markdown 放進對應分類資料夾，網站就會自動出現，不需要再重做版型。</p>
+      <div class="hero-bg"></div>
+      <div class="hero-inner">
+        <div class="hero-emblem">⚔️</div>
+        <div class="hero-text">
+          <div class="badge">★ POE 知識庫 &middot; 流派 / 策略 / 做裝</div>
+          <h1>POE 知識庫</h1>
+          <p>左側選遊戲版本與分類，中間檢視文件，右側閱讀內容。新增 Markdown 放進對應資料夾即可自動出現。</p>
+        </div>
+      </div>
     </header>
 
     <div class="layout">
       <aside class="sidebar">
-        <h2 class="side-title">分類</h2>
-        {% if categories %}
-          {% for category in categories %}
-          <button class="category-button{% if loop.first %} active{% endif %}" type="button" data-category-target="{{ category.id }}">
-            <span class="category-label-row">
-              <span class="category-name">{{ category.label }}</span>
-              <span class="category-count">{{ category.count }}</span>
-            </span>
-          </button>
+        {% if games %}
+          {% set cat_icons = {'strategy': '🗺️', 'crafting': '⚒️', 'beetle': '🪲', 'builds': '🌪️'} %}
+          {% for game in games %}
+          <div class="side-section">
+            <div class="side-game-header {{ game.id }}">
+              <span class="game-dot"></span>
+              {{ game.label }}
+            </div>
+            {% for category in game.categories %}
+            <button class="category-button {{ game.id }}-cat{% if loop.first and game == games[0] %} active{% endif %}" type="button" data-category-target="{{ category.id }}" data-game="{{ game.id }}">
+              <span class="cat-icon">{{ cat_icons.get(category.name, '📌') }}</span>
+              <span class="category-label-row">
+                <span class="category-name">{{ category.label }}</span>
+                <span class="category-count">{{ category.count }}</span>
+              </span>
+            </button>
+            {% endfor %}
+          </div>
           {% endfor %}
         {% else %}
           <div class="empty">目前還沒有任何分類內容。</div>
         {% endif %}
-
-        <div class="sidebar-note">
-          目前已建立兩個分類：<strong>策略</strong>、<strong>做裝</strong>。<br>
-          之後新增其他分類時，只要在 content 目錄下新增資料夾即可。
-        </div>
       </aside>
 
       <section class="list-panel">
-        {% if categories %}
-          {% for category in categories %}
-          <div class="category-panel{% if loop.first %} active{% endif %}" data-category-panel="{{ category.id }}" {% if not loop.first %}style="display:none"{% endif %}>
-            <h2 class="list-heading">{{ category.label }}</h2>
-            <p class="list-subheading">{{ category.count }} 份文件 · 卡片式快速切換</p>
-            <div class="card-list">
-              {% for doc in category.documents %}
-              <button class="doc-card" type="button" data-doc-target="{{ doc.id }}" data-doc-category="{{ category.id }}">
-                <h3>{{ doc.title }}</h3>
-                <p>{{ doc.summary }}</p>
-                <div class="doc-meta">{{ doc.filename }}</div>
-              </button>
-              {% endfor %}
+        {% set ns = namespace(first=true) %}
+        {% if games %}
+          {% for game in games %}
+            {% for category in game.categories %}
+            <div class="category-panel{% if ns.first %} active{% endif %}" data-category-panel="{{ category.id }}" {% if not ns.first %}style="display:none"{% endif %}>
+              <h2 class="list-heading">{{ category.label }}</h2>
+              <p class="list-subheading">{{ game.label }} &middot; {{ category.count }} 份文件</p>
+              <div class="card-list">
+                {% for doc in category.documents %}
+                <button class="doc-card {{ game.id }}-card" type="button" data-doc-target="{{ doc.id }}" data-doc-category="{{ category.id }}">
+                  <div class="doc-card-accent"></div>
+                  <div class="doc-card-body">
+                    <h3>{{ doc.title }}</h3>
+                    <p>{{ doc.summary }}</p>
+                    <div class="doc-meta">{{ doc.filename }}</div>
+                  </div>
+                </button>
+                {% endfor %}
+              </div>
             </div>
-          </div>
+            {% set ns.first = false %}
+            {% endfor %}
           {% endfor %}
         {% endif %}
       </section>
 
       <main class="viewer">
-        {% for category in categories %}
-          {% for doc in category.documents %}
-          <article class="doc-panel" id="{{ doc.id }}" data-doc-panel="{{ doc.id }}">
-            <div class="meta">{{ category.label }} / {{ doc.filename }}</div>
-            {{ doc.html|safe }}
-          </article>
+        {% if games %}
+          {% for game in games %}
+            {% for category in game.categories %}
+              {% for doc in category.documents %}
+              <article class="doc-panel" id="{{ doc.id }}" data-doc-panel="{{ doc.id }}">
+                <div class="meta {{ game.id }}-meta">
+                  {% if game.id == 'poe1' %}🔥{% else %}❄️{% endif %}
+                  {{ game.label }} / {{ category.label }}
+                </div>
+                {{ doc.html|safe }}
+              </article>
+              {% endfor %}
+            {% endfor %}
           {% endfor %}
-        {% endfor %}
-
-        {% if not categories %}
-        <div class="empty">目前沒有內容，請先新增分類資料夾與 Markdown 文件。</div>
+        {% else %}
+          <div class="empty">目前沒有內容，請先新增分類資料夾與 Markdown 文件。</div>
         {% endif %}
       </main>
     </div>
