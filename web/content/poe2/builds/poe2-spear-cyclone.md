@@ -2,6 +2,12 @@
 
 - 等級 1 即可成型，適合拓荒；最高難度（非 UBER）已通關驗證
 
+## 拓荒實況參考
+
+<div class="yt-embed"><iframe src="https://www.youtube.com/embed/caQ6y3yG8lw" title="[PoE2 0.4] Twister Monk Act1 100% Speedrun in 43 Minutes UNCUT" allowfullscreen></iframe></div>
+
+---
+
 ## 流派簡介
 
 利用 **迴旋斬（3 層）→ 旋風** 的核心手感，搭配旋風接觸元素地面可附加 50% 額外元素傷害的機制。  
