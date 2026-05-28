@@ -370,6 +370,125 @@
       }
       .sidebar, .list-panel { border-right: none; border-bottom: 1px solid var(--line); }
     }
+    /* ── SHOP FILTER TOOL ────────────────────── */
+    .sf-desc { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+    .filter-builder {
+      background: rgba(167,139,250,0.07);
+      border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin: 0 0 28px;
+    }
+    .filter-builder-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #c4b5fd;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .filter-display {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 16px;
+      background: rgba(2,6,16,0.6);
+      border-radius: 10px;
+      padding: 12px 16px;
+      min-height: 46px;
+      word-break: break-all;
+      margin-bottom: 12px;
+      color: #a5f3fc;
+    }
+    .filter-display.empty-display {
+      color: var(--muted);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+    }
+    .filter-actions { display: flex; gap: 10px; }
+    .filter-btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .copy-btn {
+      background: rgba(167,139,250,0.15);
+      border-color: rgba(167,139,250,0.4);
+      color: #c4b5fd;
+    }
+    .copy-btn:hover { background: rgba(167,139,250,0.28); }
+    .clear-btn {
+      background: rgba(148,163,184,0.06);
+      border-color: rgba(148,163,184,0.2);
+      color: var(--muted);
+    }
+    .clear-btn:hover { background: rgba(148,163,184,0.14); }
+    .kw-section { display: flex; flex-direction: column; gap: 22px; }
+    .kw-group-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #c4b5fd;
+      margin-bottom: 10px;
+      letter-spacing: 0.04em;
+    }
+    .kw-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .kw-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 10px;
+      border: 1px solid rgba(167,139,250,0.25);
+      background: rgba(167,139,250,0.07);
+      overflow: hidden;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .kw-chip.active {
+      border-color: rgba(167,139,250,0.7);
+      background: rgba(167,139,250,0.22);
+      box-shadow: 0 0 10px rgba(167,139,250,0.2);
+    }
+    .chip-label {
+      padding: 7px 12px;
+      font-size: 14px;
+      color: #e2e8f0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .kw-chip.active .chip-label { color: #c4b5fd; font-weight: 600; }
+    .kw-chip:has(.chip-label:hover) {
+      border-color: rgba(167,139,250,0.5);
+      background: rgba(167,139,250,0.14);
+    }
+    .chip-copy-btn {
+      padding: 7px 10px;
+      border: none;
+      border-left: 1px solid rgba(167,139,250,0.18);
+      background: transparent;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      transition: background 0.12s, color 0.12s;
+    }
+    .chip-copy-btn:hover { background: rgba(167,139,250,0.2); color: #c4b5fd; }
+    .copy-toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(167,139,250,0.95);
+      color: #1e1b4b;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 9999;
+    }
+    .copy-toast.show { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
@@ -405,6 +524,14 @@
               </span>
             </button>
             {% endfor %}
+            {% if game.id == 'poe2' %}
+            <button class="category-button poe2-cat" type="button" data-category-target="poe2-tools">
+              <span class="cat-icon">🔍</span>
+              <span class="category-label-row">
+                <span class="category-name">拓荒篩選</span>
+              </span>
+            </button>
+            {% endif %}
           </div>
           {% endfor %}
         {% else %}
@@ -436,6 +563,20 @@
             {% set ns.first = false %}
             {% endfor %}
           {% endfor %}
+          <div class="category-panel" data-category-panel="poe2-tools" style="display:none">
+            <h2 class="list-heading">🔍 拓荒篩選</h2>
+            <p class="list-subheading">Path of Exile 2 &middot; 商店搜尋工具</p>
+            <div class="card-list">
+              <button class="doc-card poe2-card" type="button" data-doc-target="tool-shop-filter" data-doc-category="poe2-tools">
+                <div class="doc-card-accent"></div>
+                <div class="doc-card-body">
+                  <h3>商店篩選關鍵字</h3>
+                  <p>點擊關鍵字加入篩選字串，一鍵複製貼入遊戲搜尋框</p>
+                  <div class="doc-meta">拓荒 / 找裝備用</div>
+                </div>
+              </button>
+            </div>
+          </div>
         {% endif %}
       </section>
 
@@ -454,6 +595,83 @@
               {% endfor %}
             {% endfor %}
           {% endfor %}
+          <!-- 拓荒篩選工具 -->
+          <article class="doc-panel" data-doc-panel="tool-shop-filter">
+            <div class="meta poe2-meta">❄️ Path of Exile 2 / 拓荒篩選</div>
+            <h1>商店篩選工具</h1>
+            <p class="sf-desc">點擊關鍵字標籤將其加入篩選字串（可多選），完成後按「複製」貼入遊戲商店搜尋框；也可點右側 ⧉ 單獨複製單一關鍵字。<br>多個關鍵字以 <code>|</code> 分隔，可同時比對多條詞綴。</p>
+
+            <div class="filter-builder">
+              <div class="filter-builder-label">篩選字串</div>
+              <div class="filter-display empty-display" id="filterDisplay">（點擊下方關鍵字加入）</div>
+              <div class="filter-actions">
+                <button class="filter-btn copy-btn" id="copyFilterBtn">📋 複製</button>
+                <button class="filter-btn clear-btn" id="clearFilterBtn">✕ 清除</button>
+              </div>
+            </div>
+
+            <div class="kw-section">
+              <div class="kw-group">
+                <div class="kw-group-title">🏃 移動</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="移動速"><span class="chip-label">移動速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="速度"><span class="chip-label">速度</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">⚔️ 攻擊</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="攻擊速"><span class="chip-label">攻擊速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="物理傷害"><span class="chip-label">物理傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="% 物理傷"><span class="chip-label">% 物理傷</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="附加"><span class="chip-label">附加</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="暴擊率"><span class="chip-label">暴擊率</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="暴擊傷害"><span class="chip-label">暴擊傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">🔮 法術</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="法術傷害"><span class="chip-label">法術傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="施法速"><span class="chip-label">施法速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="技能等級"><span class="chip-label">技能等級</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="近戰技"><span class="chip-label">近戰技</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">❤️ 生存</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="最大生命"><span class="chip-label">最大生命</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="大生"><span class="chip-label">大生</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="能量護盾"><span class="chip-label">能量護盾</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="最大魔力"><span class="chip-label">最大魔力</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="護甲"><span class="chip-label">護甲</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="閃避"><span class="chip-label">閃避</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">⭐ 裝備</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="品質"><span class="chip-label">品質</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">🛡️ 抗性</div>
+                <div class="kw-chips">
+                  <div class="kw-chip" data-kw="火焰抗"><span class="chip-label">火焰抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="冰冷抗"><span class="chip-label">冰冷抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="閃電抗"><span class="chip-label">閃電抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="混沌抗"><span class="chip-label">混沌抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="全元素抗"><span class="chip-label">全元素抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+            </div>
+          </article>
         {% else %}
           <div class="empty">目前沒有內容，請先新增分類資料夾與 Markdown 文件。</div>
         {% endif %}
@@ -564,6 +782,79 @@
     } else if (categoryButtons.length > 0) {
       activateCategory(categoryButtons[0].dataset.categoryTarget);
     }
+
+    // ── SHOP FILTER TOOL ─────────────────────
+    (function () {
+      const filterDisplay = document.getElementById('filterDisplay');
+      const copyFilterBtn = document.getElementById('copyFilterBtn');
+      const clearFilterBtn = document.getElementById('clearFilterBtn');
+      if (!filterDisplay) return;
+
+      const DEFAULT_KWS = ['附加', '速度', '% 物理傷', '品質', '近戰技', '大生'];
+      const activeKws = [...DEFAULT_KWS];
+
+      function updateDisplay() {
+        if (activeKws.length === 0) {
+          filterDisplay.textContent = '（點擊下方關鍵字加入）';
+          filterDisplay.classList.add('empty-display');
+        } else {
+          filterDisplay.textContent = activeKws.join('|');
+          filterDisplay.classList.remove('empty-display');
+        }
+      }
+
+      function showToast(msg) {
+        let toast = document.getElementById('copyToast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'copyToast';
+          toast.className = 'copy-toast';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      document.querySelectorAll('.kw-chip').forEach(chip => {
+        const kw = chip.dataset.kw;
+
+        chip.querySelector('.chip-label').addEventListener('click', () => {
+          const idx = activeKws.indexOf(kw);
+          if (idx !== -1) {
+            activeKws.splice(idx, 1);
+            chip.classList.remove('active');
+          } else {
+            activeKws.push(kw);
+            chip.classList.add('active');
+          }
+          updateDisplay();
+        });
+
+        chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+        });
+      });
+
+      // 預設啟用 chip 樣式
+      document.querySelectorAll('.kw-chip').forEach(chip => {
+        if (DEFAULT_KWS.includes(chip.dataset.kw)) chip.classList.add('active');
+      });
+      updateDisplay();
+
+      copyFilterBtn.addEventListener('click', () => {
+        if (activeKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
+        navigator.clipboard.writeText(activeKws.join('|')).then(() => showToast('篩選字串已複製！'));
+      });
+
+      clearFilterBtn.addEventListener('click', () => {
+        activeKws.length = 0;
+        document.querySelectorAll('.kw-chip').forEach(c => c.classList.remove('active'));
+        updateDisplay();
+      });
+    })();
   </script>
 </body>
 </html>
