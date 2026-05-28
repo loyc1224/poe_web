@@ -624,7 +624,7 @@
                 <div class="kw-chips">
                   <div class="kw-chip" data-kw="攻擊速"><span class="chip-label">攻擊速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="物理傷害"><span class="chip-label">物理傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="% 物理傷"><span class="chip-label">% 物理傷</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip" data-kw="%\s物理傷"><span class="chip-label">%\s物理傷</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="附加"><span class="chip-label">附加</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="暴擊率"><span class="chip-label">暴擊率</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="暴擊傷害"><span class="chip-label">暴擊傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
@@ -790,7 +790,7 @@
       const clearFilterBtn = document.getElementById('clearFilterBtn');
       if (!filterDisplay) return;
 
-      const DEFAULT_KWS = ['附加', '速度', '% 物理傷', '品質', '近戰技', '大生'];
+      const DEFAULT_KWS = ['附加', '速度', '%\\s物理傷', '品質', '近戰技', '大生'];
       const activeKws = [...DEFAULT_KWS];
 
       function updateDisplay() {
