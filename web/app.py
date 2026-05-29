@@ -1,8 +1,9 @@
 import threading
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 
 import markdown
-from flask import Flask, render_template
+from flask import Flask, render_template, Response, request, abort
 
 import re
 
@@ -12,6 +13,7 @@ from monitor import (
     LEAGUE_NAME,
     fetch_builds,
     fetch_economy,
+    fetch_meta_builds,
     fetch_reddit,
     generate_recommendations,
 )
@@ -117,6 +119,27 @@ def health():
     return {"status": "ok"}
 
 
+@app.route("/api/img-proxy")
+def img_proxy():
+    """安全地代理 web.poecdn.com 圖示（僅允許 /gen/image/ 路徑）。"""
+    import requests as _req
+    path = request.args.get("path", "")
+    # 白名單：只允許 /gen/image/ 路徑
+    if not path.startswith("/gen/image/"):
+        abort(400)
+    url = "https://web.poecdn.com" + path
+    try:
+        r = _req.get(url, timeout=5, headers={
+            "Referer": "https://poe.ninja/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        })
+        r.raise_for_status()
+    except Exception:
+        abort(502)
+    return Response(r.content, content_type=r.headers.get("Content-Type", "image/png"),
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
 # ── Spirit Walker 監控 ───────────────────────────────────────────────────────
 _refresh_lock = threading.Lock()
 
@@ -133,10 +156,22 @@ def monitor():
 
 @app.route("/api/monitor/data")
 def monitor_data():
-    builds  = fetch_builds()
-    economy = fetch_economy()
-    reddit  = fetch_reddit()
-    recs    = generate_recommendations(builds, economy, reddit)
+    _TIMEOUT = 4  # 每個 fetch 最多等 4 秒，超時回傳空資料
+    _empty_builds  = {"status": "unavailable", "total_characters": 0, "spirit_walker_count": 0,
+                      "companion_counts": {b["id"]: 0 for b in BEAST_TARGETS}}
+    _empty_economy = {"status": "unavailable", "items": [], "errors": []}
+    _empty_reddit  = {"status": "unavailable", "posts": [], "beast_mention_counts": {}, "errors": []}
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        f_builds  = pool.submit(fetch_builds)
+        f_economy = pool.submit(fetch_economy)
+        f_reddit  = pool.submit(fetch_reddit)
+        try:    builds  = f_builds.result(timeout=_TIMEOUT)
+        except Exception: builds = _empty_builds
+        try:    economy = f_economy.result(timeout=_TIMEOUT)
+        except Exception: economy = _empty_economy
+        try:    reddit  = f_reddit.result(timeout=_TIMEOUT)
+        except Exception: reddit = _empty_reddit
+    recs = generate_recommendations(builds, economy, reddit)
     return {
         "builds":          builds,
         "economy":         economy,
@@ -153,6 +188,20 @@ def monitor_economy_by_league(league_name: str):
         return {"status": "error", "message": "無效的聯盟名稱"}, 400
     economy = fetch_economy(league=league_name)
     return economy
+
+
+@app.route("/api/monitor/meta-builds")
+def monitor_meta_builds():
+    """開季聯盟熱門流派資料（技能排行、DPS 排行、角色清單）。"""
+    return fetch_meta_builds()
+
+
+@app.route("/api/monitor/meta-builds/league/<league_name>")
+def monitor_meta_builds_by_league(league_name: str):
+    """指定聯盟熱門流派資料。"""
+    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
+        return {"status": "error", "message": "無效的聯盟名稱"}, 400
+    return fetch_meta_builds(league=league_name)
 
 
 @app.route("/api/monitor/refresh", methods=["POST"])
@@ -179,4 +228,4 @@ def monitor_refresh():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)

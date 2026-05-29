@@ -4,6 +4,7 @@ Reddit 公開 JSON API 爬取模組。
 """
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
@@ -77,53 +78,56 @@ def fetch_reddit(force: bool = False) -> dict:
     sw_mentions = 0
     errors: list[str] = []
 
-    for subreddit, query in REDDIT_QUERIES:
-        try:
-            resp = requests.get(
-                f"https://www.reddit.com/r/{subreddit}/search.json",
-                params={"q": query, "sort": "new", "limit": 15, "restrict_sr": 1, "t": "week"},
-                headers=_HEADERS,
-                timeout=12,
-            )
-            if resp.status_code == 429:
-                errors.append(f"r/{subreddit}: rate limited，稍後再試")
-                time.sleep(2)
-                continue
-            resp.raise_for_status()
+    def _query_one(subreddit: str, query: str):
+        resp = requests.get(
+            f"https://www.reddit.com/r/{subreddit}/search.json",
+            params={"q": query, "sort": "new", "limit": 15, "restrict_sr": 1, "t": "week"},
+            headers=_HEADERS,
+            timeout=5,
+        )
+        if resp.status_code == 429:
+            return [], f"r/{subreddit}: rate limited"
+        resp.raise_for_status()
+        return resp.json().get("data", {}).get("children", []), None
 
-            for child in resp.json().get("data", {}).get("children", []):
-                p = child.get("data", {})
-                pid = p.get("id", "")
-                if not pid or pid in seen_ids:
+    with ThreadPoolExecutor(max_workers=len(REDDIT_QUERIES)) as pool:
+        futures = {
+            pool.submit(_query_one, sr, q): (sr, q)
+            for sr, q in REDDIT_QUERIES
+        }
+        for fut in as_completed(futures, timeout=6):
+            sr, q = futures[fut]
+            try:
+                children, err = fut.result()
+                if err:
+                    errors.append(err)
                     continue
-                seen_ids.add(pid)
-
-                title = p.get("title", "")
-                body  = p.get("selftext", "")
-                full  = f"{title} {body}".lower()
-
-                if any(v in full for v in ("spirit walker", "spiritwalker", "tame beast")):
-                    sw_mentions += 1
-
-                tags = _tag_post(full)
-                for t in tags:
-                    beast_counts[t] += 1
-
-                posts.append({
-                    "id":           pid,
-                    "title":        title,
-                    "subreddit":    p.get("subreddit", subreddit),
-                    "url":          f"https://reddit.com{p.get('permalink', '')}",
-                    "score":        p.get("score", 0),
-                    "num_comments": p.get("num_comments", 0),
-                    "created_utc":  p.get("created_utc", 0),
-                    "tags":         tags,
-                })
-
-            time.sleep(0.8)  # Reddit rate-limit 保護
-
-        except Exception as exc:
-            errors.append(f"r/{subreddit} '{query}': {exc}")
+                for child in children:
+                    p = child.get("data", {})
+                    pid = p.get("id", "")
+                    if not pid or pid in seen_ids:
+                        continue
+                    seen_ids.add(pid)
+                    title = p.get("title", "")
+                    body  = p.get("selftext", "")
+                    full  = f"{title} {body}".lower()
+                    if any(v in full for v in ("spirit walker", "spiritwalker", "tame beast")):
+                        sw_mentions += 1
+                    tags = _tag_post(full)
+                    for t in tags:
+                        beast_counts[t] += 1
+                    posts.append({
+                        "id":           pid,
+                        "title":        title,
+                        "subreddit":    p.get("subreddit", sr),
+                        "url":          f"https://reddit.com{p.get('permalink', '')}",
+                        "score":        p.get("score", 0),
+                        "num_comments": p.get("num_comments", 0),
+                        "created_utc":  p.get("created_utc", 0),
+                        "tags":         tags,
+                    })
+            except Exception as exc:
+                errors.append(f"r/{sr} '{q}': {exc}")
 
     # 依 score 降冪，取前 30
     posts.sort(key=lambda x: x["score"], reverse=True)

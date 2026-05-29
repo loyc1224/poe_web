@@ -86,14 +86,19 @@ REDDIT_QUERIES = [
 
 # ── poe.ninja Economy 監控品項 ────────────────────────────────────────────────
 ECONOMY_TYPES = [
-    ("item",     "Gem",             "技能石"),
-    ("item",     "UniqueWeapon",    "Unique 武器"),
-    ("item",     "UniqueArmour",    "Unique 防具"),
-    ("item",     "UniqueAccessory", "Unique 飾品"),
-    ("item",     "UniqueJewel",     "Unique 珠寶"),
-    ("item",     "Rune",            "符文"),
-    ("item",     "Omen",            "預兆"),
-    ("currency", "Currency",        "通貨"),
+    # poe.ninja PoE2 Currency Exchange API — type 對應路徑
+    # 格式：(type_param, 顯示標籤)
+    ("Currency",  "通貨"),
+    ("Delirium",  "狂亂物品"),
+]
+
+# poe.ninja PoE2 可用聯盟 slug（網址中的 league 名稱）
+# Active: Standard, Hardcore
+# Previous: Fate of the Vaal (vaal), HC Fate of the Vaal (vaalhc)
+POE2_LEAGUES = [
+    ("Standard",        "Standard"),
+    ("Hardcore",        "Hardcore"),
+    ("Fate of the Vaal", "vaal"),
 ]
 
 # ── 快取 TTL（秒）─────────────────────────────────────────────────────────────
