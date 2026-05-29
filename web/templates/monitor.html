@@ -13,6 +13,7 @@
       --red: #f87171;  --red-dim: rgba(248,113,113,0.12);
       --orange: #fb923c; --gold: #fcd34d;
       --teal: #2dd4bf; --teal-dim: rgba(45,212,191,0.12); --teal-border: rgba(45,212,191,0.3);
+      --green: #4ade80; --green-dim: rgba(74,222,128,0.12); --green-border: rgba(74,222,128,0.3);
     }
     *{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
     body{color:var(--text);font-family:"Segoe UI",Arial,sans-serif;background:#06101c;
@@ -68,6 +69,7 @@
       border-bottom-color:rgba(6,16,28,.85);position:relative;top:1px}
     .page-tab.active.teal-tab{color:var(--teal);border-color:var(--teal-border)}
     .page-tab.active.orange-tab{color:var(--orange);border-color:rgba(251,146,60,.4)}
+    .page-tab.active.green-tab{color:var(--green);border-color:var(--green-border)}
     .tab-content{display:none;padding:24px 28px 36px}.tab-content.active{display:block}
     /* ALERTS */
     .alerts-wrap{margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
@@ -271,6 +273,9 @@
     <button class="page-tab orange-tab" onclick="switchTab('meta',this)">
       <span>&#128293;</span><span class="tab-label">熱門流派</span>
     </button>
+    <button class="page-tab green-tab" onclick="switchTab('poe1',this)">
+      <span>&#127966;</span><span class="tab-label">PoE1 物價 <small style="opacity:.6">({{ poe1_league }})</small></span>
+    </button>
   </div>
 
   <!-- TAB 1: 監控儀表板 -->
@@ -438,13 +443,44 @@
     </div>
   </div>
 
+  <!-- TAB 5: PoE1 物價 -->
+  <div class="tab-content" id="tab-poe1">
+    <div class="alerts-wrap" id="poe1-alerts"></div>
+    <div class="eco-controls">
+      <div class="eco-tabs" id="poe1-eco-tabs"></div>
+      <input class="eco-search" id="poe1-eco-search" type="text" placeholder="搜尋物品名稱…" oninput="filterEcoPoe1()">
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="league-toggle-btn active" id="poe1-lg-cur" onclick="switchPoe1League('{{ poe1_league }}',this)">{{ poe1_league }}</button>
+        <button class="league-toggle-btn" id="poe1-lg-std" onclick="switchPoe1League('Standard',this)">Standard</button>
+        <a class="ninja-ext-btn" href="https://poe.ninja/economy/{{ poe1_league | lower }}/currency" target="_blank" rel="noopener noreferrer">poe.ninja &#128279;</a>
+      </div>
+    </div>
+    <div class="eco-table-wrap">
+      <table class="eco-table">
+        <thead><tr>
+          <th style="width:40px"></th>
+          <th onclick="sortEcoPoe1('name')">物品名稱</th>
+          <th onclick="sortEcoPoe1('zh')">中文名</th>
+          <th onclick="sortEcoPoe1('label')">類型</th>
+          <th onclick="sortEcoPoe1('chaos')">混沌石價 ↕</th>
+          <th onclick="sortEcoPoe1('change_1d')">24h 漲幅 ↕</th>
+          <th onclick="sortEcoPoe1('change_7d')">7d 漲幅 ↕</th>
+          <th onclick="sortEcoPoe1('volume')">掛單量 ↕</th>
+        </tr></thead>
+        <tbody id="poe1-eco-tbody"><tr><td colspan="8" class="loading"><span class="spin">⌛</span> 點選此分頁自動載入…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="row-count" id="poe1-eco-count"></div>
+  </div>
+
 </div>
 <script>
 const AUTO_REFRESH_SEC = 600;
 let countdownTimer = null, countdownSec = 0;
 const state = {
-  new: { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
-  cur: { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
+  new:  { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
+  cur:  { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
+  poe1: { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false, league:'{{ poe1_league }}' },
 };
 const BEAST_META = {
   {% for beast in beast_targets %}
@@ -467,6 +503,10 @@ function switchTab(id, btn) {
     document.getElementById('badge-league-label').textContent = '流派聯盟：';
     document.getElementById('badge-league-name').textContent = lg;
     if (!metaState.loaded) loadMetaBuilds();
+  } else if (id === 'poe1') {
+    document.getElementById('badge-league-label').textContent = 'PoE1 聯盟：';
+    document.getElementById('badge-league-name').textContent = state.poe1.league;
+    if (!state.poe1.loaded) loadPoe1Eco();
   } else {
     document.getElementById('badge-league-label').textContent = '開季聯盟：';
     document.getElementById('badge-league-name').textContent = '{{ league }}';
@@ -534,7 +574,7 @@ function triggerRefresh(){
 async function loadCurrentEco(force=false){
   if(!force&&state.cur.loaded)return;
   const tbody=document.getElementById('cur-eco-tbody');
-  if(tbody)tbody.innerHTML='<tr><td colspan="6" class="loading"><span class="spin">⌛</span> 載入現有聯盟物價…</td></tr>';
+  if(tbody)tbody.innerHTML='<tr><td colspan="8" class="loading"><span class="spin">⌛</span> 載入現有聯盟物價…</td></tr>';
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),5000);
   try{
@@ -560,13 +600,99 @@ function ingestEco(which,items,status,errors){
       ?'「'+lg+'」聯盟尚未開始，物價資料待開季後自動更新。'
       :'「'+lg+'」物價資料暫時無法取得（'+(errors||[]).slice(0,2).join('、')+'）。'}]);
     const tbody=document.getElementById(which+'-eco-tbody');
-    if(tbody&&which==='new')tbody.innerHTML='<tr><td colspan="6"><div class="not-started-banner"><div class="nsb-icon">🚀</div><h3>「{{ league }}」聯盟尚未開始</h3><p>開季後 poe.ninja 開始收錄物價資料，屆時此分頁將自動顯示漲跌幅排行。<br>目前「現在去抓誰」已依優先度排序，供你預先規劃抓寵路線。</p></div></td></tr>';
+    if(tbody&&which==='new')tbody.innerHTML='<tr><td colspan="8"><div class="not-started-banner"><div class="nsb-icon">🚀</div><h3>「{{ league }}」聯盟尚未開始</h3><p>開季後 poe.ninja 開始收錄物價資料，屆時此分頁將自動顯示漲跌幅排行。<br>目前「現在去抓誰」已依優先度排序，供你預先規劃抓寵路線。</p></div></td></tr>';
     return;
   }
   renderAlerts(aid,[]);
   buildEcoTabs(which,items);
   s.filtered=items;
   renderEcoTable(which);
+}
+async function loadPoe1Eco(force=false){
+  if(!force&&state.poe1.loaded)return;
+  const tbody=document.getElementById('poe1-eco-tbody');
+  if(tbody)tbody.innerHTML='<tr><td colspan="8" class="loading"><span class="spin">⌛</span> 載入 PoE1 物價…</td></tr>';
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),5000);
+  try{
+    const resp=await fetch('/api/monitor/poe1/economy/league/'+encodeURIComponent(state.poe1.league),{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    const s=state.poe1;
+    s.items=data.items||[];
+    if(!s.items.length){
+      renderAlerts('poe1-alerts',[{type:'warning',msg:'「'+state.poe1.league+'」物價資料暫時無法取得。'}]);
+      if(tbody)tbody.innerHTML='<tr><td colspan="8" class="empty">查無資料</td></tr>';
+      return;
+    }
+    renderAlerts('poe1-alerts',[]);
+    buildEcoTabsPoe1(s.items);
+    s.filtered=s.items;
+    renderEcoTablePoe1();
+    state.poe1.loaded=true;
+  }catch(e){
+    clearTimeout(tid);
+    const msg=e.name==='AbortError'?'請求逾時':escHtml(e.message);
+    if(tbody)tbody.innerHTML='<tr><td colspan="8" class="empty">⚠️ 載入失敗：'+msg+'</td></tr>';
+  }
+}
+function switchPoe1League(leagueName, btn){
+  document.querySelectorAll('#tab-poe1 .league-toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  state.poe1.league=leagueName;
+  state.poe1.loaded=false;
+  document.getElementById('badge-league-name').textContent=leagueName;
+  loadPoe1Eco();
+}
+function buildEcoTabsPoe1(items){
+  const el=document.getElementById('poe1-eco-tabs');
+  if(!el)return;
+  const types=[...new Set(items.map(i=>i.label))];
+  el.innerHTML=['全部',...types].map(t=>{
+    const act=(state.poe1.type===null&&t==='全部')||(state.poe1.type===t)?' active':'';
+    return '<button class="eco-tab'+act+'" onclick="switchEcoTypePoe1(\''+escHtml(t)+'\')">'+escHtml(t)+'</button>';
+  }).join('');
+}
+function switchEcoTypePoe1(label){
+  state.poe1.type=label==='全部'?null:label;
+  applyFilterPoe1();
+  buildEcoTabsPoe1(state.poe1.items);
+  renderEcoTablePoe1();
+}
+function filterEcoPoe1(){
+  applyFilterPoe1();
+  renderEcoTablePoe1();
+}
+function applyFilterPoe1(){
+  const s=state.poe1;
+  const q=(document.getElementById('poe1-eco-search')?.value||'').toLowerCase();
+  s.filtered=s.items.filter(i=>{
+    if(s.type&&i.label!==s.type)return false;
+    if(q&&!i.name.toLowerCase().includes(q)&&!(i.zh||'').includes(q))return false;
+    return true;
+  });
+}
+function sortEcoPoe1(key){
+  const s=state.poe1;
+  s.sort={key,dir:s.sort.key===key?-s.sort.dir:-1};
+  renderEcoTablePoe1();
+}
+function renderEcoTablePoe1(){
+  const s=state.poe1;
+  const tbody=document.getElementById('poe1-eco-tbody');
+  const cnt=document.getElementById('poe1-eco-count');
+  if(!tbody)return;
+  const sorted=[...s.filtered].sort((a,b)=>{
+    const av=a[s.sort.key]??0,bv=b[s.sort.key]??0;
+    return typeof av==='string'?av.localeCompare(bv)*s.sort.dir:(av-bv)*s.sort.dir;
+  });
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="8" class="empty">查無符合物品</td></tr>';if(cnt)cnt.textContent='';return;}
+  tbody.innerHTML=sorted.slice(0,100).map(item=>{
+    const icon=item.icon?'<img class="item-icon" src="/api/img-proxy?path='+encodeURIComponent(item.icon)+'" alt="" loading="lazy">':'<span style="display:inline-block;width:32px"></span>';
+    return '<tr><td style="text-align:center">'+icon+'</td><td class="item-name">'+escHtml(item.name)+'</td><td class="item-zh">'+escHtml(item.zh||'—')+'</td><td class="item-type">'+escHtml(item.label)+'</td><td class="chaos-val">'+item.chaos+'c</td><td>'+fmtChange(item.change_1d)+'</td><td>'+fmtChange(item.change_7d)+'</td><td class="vol">'+item.volume+'</td></tr>';
+  }).join('');
+  if(cnt)cnt.textContent=sorted.length>100?'顯示前 100 筆，共 '+sorted.length+' 筆':'共 '+sorted.length+' 筆';
 }
 function buildEcoTabs(which,items){
   const el=document.getElementById(which+'-eco-tabs');

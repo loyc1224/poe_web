@@ -101,6 +101,20 @@ POE2_LEAGUES = [
     ("Fate of the Vaal", "vaal"),
 ]
 
+# ── PoE1 設定 ─────────────────────────────────────────────────────────────────
+POE1_LEAGUE   = "Mirage"    # 目前 PoE1 聯盟（2026-05）
+POE1_STANDARD = "Standard"  # PoE1 Standard 聯盟
+
+# PoE1 economy 類型（格式：(type_param, 標籤)，皆用 exchange API）
+POE1_ECONOMY_TYPES = [
+    ("Currency",      "通貨"),
+    ("Fragment",      "碎片"),
+    ("Scarab",        "聖甲蟲"),
+    ("Essence",       "精華"),
+    ("DivinationCard","命運卡"),
+    ("Oil",           "油"),
+]
+
 # ── 快取 TTL（秒）─────────────────────────────────────────────────────────────
 CACHE_TTL = {
     "builds":  900,   # 15 分鐘

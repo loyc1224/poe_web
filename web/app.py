@@ -11,9 +11,11 @@ from monitor import (
     BEAST_TARGETS,
     CURRENT_LEAGUE_NAME,
     LEAGUE_NAME,
+    POE1_LEAGUE,
     fetch_builds,
     fetch_economy,
     fetch_meta_builds,
+    fetch_poe1_economy,
     fetch_reddit,
     generate_recommendations,
 )
@@ -151,6 +153,7 @@ def monitor():
         beast_targets=BEAST_TARGETS,
         league=LEAGUE_NAME,
         current_league=CURRENT_LEAGUE_NAME,
+        poe1_league=POE1_LEAGUE,
     )
 
 
@@ -202,6 +205,20 @@ def monitor_meta_builds_by_league(league_name: str):
     if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
         return {"status": "error", "message": "無效的聯盟名稱"}, 400
     return fetch_meta_builds(league=league_name)
+
+
+@app.route("/api/monitor/poe1/economy")
+def monitor_poe1_economy():
+    """PoE1 目前聯盟物價資料。"""
+    return fetch_poe1_economy()
+
+
+@app.route("/api/monitor/poe1/economy/league/<league_name>")
+def monitor_poe1_economy_by_league(league_name: str):
+    """PoE1 指定聯盟物價資料。"""
+    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
+        return {"status": "error", "message": "無效的聯盟名稱"}, 400
+    return fetch_poe1_economy(league=league_name)
 
 
 @app.route("/api/monitor/refresh", methods=["POST"])
