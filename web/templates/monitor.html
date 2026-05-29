@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spirit Walker 開季監控 | POE 知識庫</title>
+  <style>
+    :root {
+      --bg: #06101c; --line: rgba(148,163,184,0.14); --text: #e2e8f0; --muted: #94a3b8;
+      --shadow: 0 24px 80px rgba(0,0,0,0.5);
+      --p2: #a78bfa; --p2-dim: rgba(167,139,250,0.12); --p2-border: rgba(167,139,250,0.3);
+      --green: #34d399; --green-dim: rgba(52,211,153,0.12);
+      --red: #f87171;  --red-dim: rgba(248,113,113,0.12);
+      --orange: #fb923c; --gold: #fcd34d;
+      --teal: #2dd4bf; --teal-dim: rgba(45,212,191,0.12); --teal-border: rgba(45,212,191,0.3);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+    body{color:var(--text);font-family:"Segoe UI",Arial,sans-serif;background:#06101c;
+      background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(167,139,250,.10),transparent)}
+    .shell{width:min(1400px,calc(100% - 24px));margin:14px auto 40px;border:1px solid rgba(148,163,184,.12);
+      border-radius:20px;overflow:hidden;background:rgba(6,16,28,.85);
+      box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.03);backdrop-filter:blur(20px)}
+    /* NAV */
+    .top-nav{display:flex;align-items:center;gap:16px;padding:10px 28px;
+      border-bottom:1px solid var(--line);background:rgba(2,6,16,.4);font-size:13px}
+    .top-nav a{color:var(--muted);text-decoration:none;transition:color .15s}.top-nav a:hover{color:var(--text)}
+    .top-nav .sep{color:var(--line)}.top-nav .current{color:var(--p2)}
+    /* HERO */
+    .hero{position:relative;border-bottom:1px solid var(--line);overflow:hidden}
+    .hero-bg{position:absolute;inset:0;background:linear-gradient(105deg,rgba(167,139,250,.18) 0%,transparent 50%),
+      linear-gradient(255deg,rgba(99,102,241,.12) 0%,transparent 50%),linear-gradient(180deg,#0d1a2e 0%,#06101c 100%)}
+    .hero-inner{position:relative;padding:26px 36px 22px;display:flex;align-items:center;gap:22px}
+    .hero-emblem{flex-shrink:0;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+      font-size:34px;background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(99,102,241,.15));
+      border:1px solid rgba(167,139,250,.3);border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+    .hero-text{flex:1}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;
+      background:var(--p2-dim);border:1px solid var(--p2-border);color:var(--p2);
+      font-size:11px;letter-spacing:.06em;margin-bottom:8px}
+    .hero h1{font-size:26px;margin-bottom:4px;
+      background:linear-gradient(90deg,#c4b5fd 0%,#f8fafc 50%,#a78bfa 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{color:var(--muted);font-size:13px;line-height:1.6}
+    /* STATUS BAR */
+    .status-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:10px 28px;
+      border-bottom:1px solid var(--line);background:rgba(2,6,16,.35);font-size:12px}
+    .league-badge{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:8px;
+      background:var(--p2-dim);border:1px solid var(--p2-border);color:#c4b5fd;font-weight:600}
+    .status-indicators{display:flex;gap:8px;flex-wrap:wrap}
+    .status-dot{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;
+      background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.12);color:var(--muted)}
+    .status-dot .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+    .status-dot.ok .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .status-dot.warn .dot{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+    .status-dot.err .dot{background:var(--red);box-shadow:0 0 6px var(--red)}
+    .status-bar .last-updated{color:var(--muted);margin-left:auto}
+    .refresh-btn{padding:5px 16px;border-radius:8px;background:var(--p2-dim);border:1px solid var(--p2-border);
+      color:#c4b5fd;font-size:12px;cursor:pointer;transition:all .15s}
+    .refresh-btn:hover{background:rgba(167,139,250,.22)}.refresh-btn:disabled{opacity:.5;cursor:not-allowed}
+    .countdown{color:var(--muted);font-size:11px}
+    /* PAGE TABS */
+    .page-tabs{display:flex;gap:4px;padding:12px 28px 0;border-bottom:1px solid var(--line);background:rgba(4,10,20,.5)}
+    .page-tab{padding:9px 20px;border-radius:10px 10px 0 0;font-size:13px;font-weight:600;cursor:pointer;
+      border:1px solid transparent;border-bottom:none;color:var(--muted);background:transparent;
+      transition:all .15s;display:flex;align-items:center;gap:7px}
+    .page-tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.04)}
+    .page-tab.active{color:#c4b5fd;background:rgba(6,16,28,.85);border-color:var(--p2-border);
+      border-bottom-color:rgba(6,16,28,.85);position:relative;top:1px}
+    .page-tab.active.teal-tab{color:var(--teal);border-color:var(--teal-border)}
+    .tab-content{display:none;padding:24px 28px 36px}.tab-content.active{display:block}
+    /* ALERTS */
+    .alerts-wrap{margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
+    .alert{padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.5;
+      display:flex;align-items:flex-start;gap:10px}
+    .alert.warning{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);color:#fdba74}
+    .alert.info{background:var(--p2-dim);border:1px solid var(--p2-border);color:#c4b5fd}
+    .alert.success{background:var(--green-dim);border:1px solid rgba(52,211,153,.3);color:#6ee7b7}
+    .not-started-banner{padding:32px;border-radius:16px;text-align:center;
+      background:rgba(167,139,250,.07);border:1px solid var(--p2-border);margin:12px 0 20px}
+    .not-started-banner .nsb-icon{font-size:40px;margin-bottom:12px}
+    .not-started-banner h3{font-size:18px;color:#c4b5fd;margin-bottom:6px}
+    .not-started-banner p{color:var(--muted);font-size:13px;line-height:1.7}
+    /* SECTION */
+    .section{margin-bottom:28px}
+    .section-title{font-size:15px;font-weight:700;margin-bottom:14px;
+      display:flex;align-items:center;gap:8px;color:var(--text)}
+    .section-title .icon{font-size:20px}
+    /* HUNT CARDS */
+    .hunt-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .hunt-card{padding:16px 18px;border-radius:14px;background:var(--p2-dim);border:1px solid var(--p2-border);
+      position:relative;overflow:hidden}
+    .hunt-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+      background:linear-gradient(90deg,#7c3aed,#a78bfa,#7c3aed)}
+    .hunt-card .rank{color:var(--p2);font-size:11px;font-weight:700;letter-spacing:.08em;margin-bottom:6px}
+    .hunt-card .beast-name{font-size:18px;font-weight:700;margin-bottom:2px}
+    .hunt-card .beast-en{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .hunt-card .reason{font-size:12px;color:#c4b5fd;line-height:1.5}
+    .hunt-card .signal-badge{margin-top:10px;display:inline-flex;padding:3px 10px;border-radius:6px;
+      background:rgba(167,139,250,.15);font-size:12px;color:#e9d5ff}
+    /* BEAST GRID */
+    .beast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+    .beast-card{padding:14px 16px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(10,18,32,.6);transition:all .2s}
+    .beast-card:hover{border-color:var(--p2-border);transform:translateY(-2px)}
+    .beast-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .beast-zh{font-size:17px;font-weight:700}
+    .priority-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;letter-spacing:.04em;white-space:nowrap}
+    .priority-extreme{background:rgba(248,113,113,.18);color:#fca5a5;border:1px solid rgba(248,113,113,.35)}
+    .priority-high   {background:rgba(251,146,60,.18);color:#fdba74;border:1px solid rgba(251,146,60,.35)}
+    .priority-midhigh{background:rgba(252,211,77,.14);color:#fde68a;border:1px solid rgba(252,211,77,.3)}
+    .priority-mid    {background:rgba(148,163,184,.1);color:var(--muted);border:1px solid var(--line)}
+    .beast-en-name{font-size:11px;color:var(--muted);margin-bottom:6px}
+    .beast-loc{font-size:11px;color:#818cf8;display:flex;align-items:center;gap:4px;margin-bottom:4px}
+    .beast-stage{font-size:11px;color:var(--muted);display:inline-block;padding:2px 8px;border-radius:5px;
+      background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.1);margin-bottom:8px}
+    .beast-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+    .beast-stats{display:flex;gap:6px;flex-wrap:wrap}
+    .beast-stat{font-size:11px;padding:3px 8px;border-radius:6px;
+      background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.1);color:var(--muted)}
+    .beast-stat.has-data{color:var(--green);border-color:rgba(52,211,153,.3);background:var(--green-dim)}
+    .beast-signal{margin-top:8px;font-size:12px;font-weight:600}
+    /* ORDER LIST */
+    .order-list{display:flex;flex-direction:column;gap:8px}
+    .order-item{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;
+      border:1px solid var(--line);background:rgba(10,18,32,.5);transition:all .15s}
+    .order-item:hover{border-color:var(--p2-border)}
+    .order-num{flex-shrink:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+      border-radius:50%;font-size:13px;font-weight:700;background:var(--p2-dim);
+      border:1px solid var(--p2-border);color:#c4b5fd}
+    .order-name{font-weight:700;font-size:15px}.order-en{font-size:11px;color:var(--muted)}
+    .order-loc{font-size:11px;color:#818cf8;margin-left:auto}.order-signal{font-size:13px;margin-left:8px}
+    /* ECONOMY TABLE */
+    .eco-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+    .eco-tabs{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+    .eco-tab{padding:5px 14px;border-radius:8px;font-size:12px;cursor:pointer;
+      border:1px solid var(--line);background:transparent;color:var(--muted);transition:all .15s}
+    .eco-tab.active{background:var(--p2-dim);border-color:var(--p2-border);color:#c4b5fd}
+    .eco-tab.active.teal{background:var(--teal-dim);border-color:var(--teal-border);color:var(--teal)}
+    .eco-tab:hover:not(.active){background:rgba(255,255,255,.04)}
+    .eco-search{padding:6px 12px;border-radius:8px;font-size:12px;width:200px;
+      background:rgba(148,163,184,.06);border:1px solid var(--line);color:var(--text);outline:none}
+    .eco-search:focus{border-color:var(--p2-border)}
+    .eco-table-wrap{overflow-x:auto}
+    .eco-table{width:100%;border-collapse:collapse;font-size:13px}
+    .eco-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);
+      border-bottom:1px solid var(--line);white-space:nowrap;letter-spacing:.04em;cursor:pointer;user-select:none}
+    .eco-table th:hover{color:var(--text)}
+    .eco-table td{padding:8px 12px;border-bottom:1px solid rgba(148,163,184,.06)}
+    .eco-table tr:hover td{background:rgba(255,255,255,.02)}
+    .item-name{font-weight:600;max-width:240px}.item-type{font-size:11px;color:var(--muted)}
+    .change-pos{color:var(--green);font-weight:600}.change-neg{color:var(--red);font-weight:600}
+    .change-neu{color:var(--muted)}.chaos-val{color:var(--gold);font-weight:600}
+    .vol{color:var(--muted);font-size:11px}.row-count{font-size:11px;color:var(--muted);margin-top:8px}
+    /* REDDIT */
+    .reddit-list{display:flex;flex-direction:column;gap:10px}
+    .reddit-post{padding:12px 16px;border-radius:12px;border:1px solid var(--line);
+      background:rgba(10,18,32,.45);display:flex;gap:14px;align-items:flex-start;transition:border-color .15s}
+    .reddit-post:hover{border-color:var(--p2-border)}
+    .reddit-score{flex-shrink:0;width:40px;text-align:center;font-size:13px;font-weight:700;color:var(--orange);padding-top:2px}
+    .reddit-body{flex:1;min-width:0}
+    .reddit-title{font-size:14px;font-weight:600;line-height:1.4;display:block;color:var(--text);text-decoration:none;margin-bottom:5px}
+    .reddit-title:hover{color:#c4b5fd}
+    .reddit-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+    .reddit-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+    .reddit-tag{padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;
+      background:var(--p2-dim);border:1px solid var(--p2-border);color:#c4b5fd}
+    /* MISC */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .loading{color:var(--muted);font-size:13px;padding:20px 0;text-align:center}
+    .empty{color:var(--muted);font-size:13px;padding:16px 0}
+    .spin{display:inline-block;animation:spin 1s linear infinite}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @media(max-width:800px){.two-col{grid-template-columns:1fr}.beast-grid{grid-template-columns:1fr 1fr}
+      .page-tab .tab-label{display:none}}
+    @media(max-width:480px){.beast-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="top-nav">
+    <a href="/">POE 知識庫</a>
+    <span class="sep">›</span>
+    <span class="current">Spirit Walker 開季監控</span>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-inner">
+      <div class="hero-emblem">&#129413;</div>
+      <div class="hero-text">
+        <div class="badge">&#10022; PoE2 0.5 Spirit Walker</div>
+        <h1>開季 AI 監控系統</h1>
+        <p>整合 poe.ninja Builds、Economy 與 Reddit 訊號，即時追蹤最強神獸、漲價物品與社群動向。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="league-badge">
+      <span>&#9679;</span>
+      <span id="badge-league-label">開季聯盟：</span><strong id="badge-league-name">{{ league }}</strong>
+    </div>
+    <div class="status-indicators">
+      <div class="status-dot" id="status-builds"><span class="dot"></span><span>Builds</span></div>
+      <div class="status-dot" id="status-economy"><span class="dot"></span><span>Economy</span></div>
+      <div class="status-dot" id="status-reddit"><span class="dot"></span><span>Reddit</span></div>
+    </div>
+    <span class="last-updated" id="last-updated">—</span>
+    <span class="countdown" id="countdown"></span>
+    <button class="refresh-btn" id="refresh-btn" onclick="triggerRefresh()">&#8635; 重新整理</button>
+  </div>
+
+  <!-- PAGE TABS -->
+  <div class="page-tabs">
+    <button class="page-tab active" onclick="switchTab('monitor',this)">
+      <span>&#128508;</span><span class="tab-label">監控儀表板</span>
+    </button>
+    <button class="page-tab" onclick="switchTab('new-eco',this)">
+      <span>&#128200;</span><span class="tab-label">開季物價 <small style="opacity:.6">({{ league }})</small></span>
+    </button>
+    <button class="page-tab teal-tab" onclick="switchTab('cur-eco',this)">
+      <span>&#128176;</span><span class="tab-label">現有聯盟物價 <small style="opacity:.6">({{ current_league }})</small></span>
+    </button>
+  </div>
+
+  <!-- TAB 1: 監控儀表板 -->
+  <div class="tab-content active" id="tab-monitor">
+    <div class="alerts-wrap" id="alerts-wrap"></div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">&#127919;</span> 現在該抓誰</div>
+      <div class="hunt-cards" id="hunt-now"><div class="loading"><span class="spin">⌛</span> 計算中…</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">&#128203;</span> 完整抓寵路線</div>
+      <div class="order-list" id="capture-order"><div class="loading"><span class="spin">⌛</span> 計算中…</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">&#128062;</span> 神獸熱度追蹤</div>
+      <div class="beast-grid">
+        {% for beast in beast_targets %}
+        <div class="beast-card" id="beast-card-{{ beast.id }}">
+          <div class="beast-card-top">
+            <span class="beast-zh">{{ beast.zh }}</span>
+            <span class="priority-tag" id="ptag-{{ beast.id }}">{{ beast.priority }}</span>
+          </div>
+          <div class="beast-en-name">{{ beast.en }}</div>
+          <div class="beast-loc">📍 {{ beast.location }}</div>
+          <div class="beast-stage">{{ beast.stage }}</div>
+          <div class="beast-desc">{{ beast.description }}</div>
+          <div class="beast-stats">
+            <span class="beast-stat" id="stat-build-{{ beast.id }}">角色: --</span>
+            <span class="beast-stat" id="stat-reddit-{{ beast.id }}">討論: --</span>
+          </div>
+          <div class="beast-signal" id="signal-{{ beast.id }}"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section">
+        <div class="section-title"><span class="icon">📈</span> 值得買入（24h 漲幅 ≥5%）</div>
+        <div id="buy-table"><div class="loading"><span class="spin">⌛</span></div></div>
+      </div>
+      <div class="section">
+        <div class="section-title"><span class="icon">📉</span> 考慮賣出（24h 跌幅 ≥5%）</div>
+        <div id="sell-table"><div class="loading"><span class="spin">⌛</span></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">💬</span> 社群討論熱度</div>
+      <div class="reddit-list" id="reddit-list"><div class="loading"><span class="spin">⌛</span> 載入中…</div></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: 開季物價 -->
+  <div class="tab-content" id="tab-new-eco">
+    <div class="alerts-wrap" id="new-eco-alerts"></div>
+    <div class="eco-controls">
+      <div class="eco-tabs" id="new-eco-tabs"></div>
+      <input class="eco-search" id="new-eco-search" type="text" placeholder="搜尋物品名稱…" oninput="filterEco('new')">
+    </div>
+    <div class="eco-table-wrap">
+      <table class="eco-table">
+        <thead><tr>
+          <th onclick="sortEco('new','name')">物品名稱</th>
+          <th onclick="sortEco('new','label')">類型</th>
+          <th onclick="sortEco('new','chaos')">混沌石價 ↕</th>
+          <th onclick="sortEco('new','change_1d')">24h 漲幅 ↕</th>
+          <th onclick="sortEco('new','change_7d')">7d 漲幅 ↕</th>
+          <th onclick="sortEco('new','volume')">掛單量 ↕</th>
+        </tr></thead>
+        <tbody id="new-eco-tbody"><tr><td colspan="6" class="loading"><span class="spin">⌛</span> 載入中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="row-count" id="new-eco-count"></div>
+  </div>
+
+  <!-- TAB 3: 現有聯盟物價 -->
+  <div class="tab-content" id="tab-cur-eco">
+    <div class="alerts-wrap" id="cur-eco-alerts"></div>
+    <div class="eco-controls">
+      <div class="eco-tabs" id="cur-eco-tabs"></div>
+      <input class="eco-search" id="cur-eco-search" type="text" placeholder="搜尋物品名稱…" oninput="filterEco('cur')">
+    </div>
+    <div class="eco-table-wrap">
+      <table class="eco-table">
+        <thead><tr>
+          <th onclick="sortEco('cur','name')">物品名稱</th>
+          <th onclick="sortEco('cur','label')">類型</th>
+          <th onclick="sortEco('cur','chaos')">混沌石價 ↕</th>
+          <th onclick="sortEco('cur','change_1d')">24h 漲幅 ↕</th>
+          <th onclick="sortEco('cur','change_7d')">7d 漲幅 ↕</th>
+          <th onclick="sortEco('cur','volume')">掛單量 ↕</th>
+        </tr></thead>
+        <tbody id="cur-eco-tbody"><tr><td colspan="6" class="loading"><span class="spin">⌛</span> 點選此分頁自動載入…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="row-count" id="cur-eco-count"></div>
+  </div>
+
+</div>
+<script>
+const AUTO_REFRESH_SEC = 600;
+let countdownTimer = null, countdownSec = 0;
+const state = {
+  new: { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
+  cur: { items:[], filtered:[], type:null, sort:{key:'change_1d',dir:-1}, loaded:false },
+};
+const BEAST_META = {
+  {% for beast in beast_targets %}
+  "{{ beast.id }}": { zh:"{{ beast.zh }}", en:"{{ beast.en }}", priority:"{{ beast.priority }}", stage:"{{ beast.stage }}" },
+  {% endfor %}
+};
+const PRIORITY_CLS = { "極高":"priority-extreme","高":"priority-high","中高":"priority-midhigh","中":"priority-mid" };
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'cur-eco') {
+    document.getElementById('badge-league-label').textContent = '現有聯盟：';
+    document.getElementById('badge-league-name').textContent = '{{ current_league }}';
+    if (!state.cur.loaded) loadCurrentEco();
+  } else {
+    document.getElementById('badge-league-label').textContent = '開季聯盟：';
+    document.getElementById('badge-league-name').textContent = '{{ league }}';
+  }
+}
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts*1000).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function fmtChange(v) {
+  if (v===null||v===undefined||v===0) return '<span class="change-neu">—</span>';
+  return '<span class="'+(v>0?'change-pos':'change-neg')+'">'+(v>0?'+':'')+v+'%</span>';
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setDot(id,st){const e=document.getElementById(id);if(e)e.className='status-dot '+st;}
+function stCls(s){return(s==='ok'||s==='partial')?'ok':s==='unavailable'?'warn':'err';}
+
+async function loadData(force=false) {
+  const btn=document.getElementById('refresh-btn');
+  if(btn)btn.disabled=true;
+  if(btn&&force)btn.textContent='⌛ 更新中…';
+  try {
+    const resp=await fetch(force?'/api/monitor/refresh':'/api/monitor/data',{method:force?'POST':'GET'});
+    if(!resp.ok){showAlert('alerts-wrap','warning','資料取得失敗：HTTP '+resp.status);return;}
+    const data=await resp.json();
+    setDot('status-builds',stCls(data.builds?.status));
+    setDot('status-economy',stCls(data.economy?.status));
+    setDot('status-reddit',stCls(data.reddit?.status));
+    const times=[data.builds,data.economy,data.reddit].map(d=>d?.fetched_at).filter(Boolean);
+    const lu=document.getElementById('last-updated');
+    if(lu)lu.textContent=times.length?'更新：'+fmtTime(Math.max(...times)):'—';
+    const recs=data.recommendations||{};
+    renderAlerts('alerts-wrap',recs.alerts||[]);
+    renderHuntNow(recs.hunt_order||[]);
+    renderCaptureOrder(recs.hunt_order||[]);
+    renderBeastStats(data.builds,data.reddit);
+    renderMiniTables(recs.buy_watch||[],recs.sell_watch||[]);
+    renderReddit(data.reddit?.posts||[],data.reddit?.status);
+    ingestEco('new',data.economy?.items||[],data.economy?.status,data.economy?.errors);
+    resetCountdown();
+  } catch(e){showAlert('alerts-wrap','warning','網路錯誤：'+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent='↺ 重新整理';}}
+}
+function triggerRefresh(){
+  const at=document.querySelector('.tab-content.active')?.id;
+  if(at==='tab-cur-eco')loadCurrentEco(true);else loadData(true);
+}
+async function loadCurrentEco(force=false){
+  if(!force&&state.cur.loaded)return;
+  const tbody=document.getElementById('cur-eco-tbody');
+  if(tbody)tbody.innerHTML='<tr><td colspan="6" class="loading"><span class="spin">⌛</span> 載入現有聯盟物價…</td></tr>';
+  try{
+    const resp=await fetch('/api/monitor/economy/league/{{ current_league }}');
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    ingestEco('cur',data.items||[],data.status,data.errors);
+    state.cur.loaded=true;
+  }catch(e){if(tbody)tbody.innerHTML='<tr><td colspan="6" class="empty">⚠️ 載入失敗：'+escHtml(e.message)+'</td></tr>';}
+}
+function ingestEco(which,items,status,errors){
+  const s=state[which];
+  s.items=items;
+  const aid=which==='new'?'new-eco-alerts':'cur-eco-alerts';
+  if(!items.length&&(status==='unavailable'||status==='error')){
+    const lg=which==='new'?'{{ league }}':'{{ current_league }}';
+    renderAlerts(aid,[{type:'warning',msg:which==='new'
+      ?'「'+lg+'」聯盟尚未開始，物價資料待開季後自動更新。'
+      :'「'+lg+'」物價資料暫時無法取得（'+(errors||[]).slice(0,2).join('、')+'）。'}]);
+    const tbody=document.getElementById(which+'-eco-tbody');
+    if(tbody&&which==='new')tbody.innerHTML='<tr><td colspan="6"><div class="not-started-banner"><div class="nsb-icon">🚀</div><h3>「{{ league }}」聯盟尚未開始</h3><p>開季後 poe.ninja 開始收錄物價資料，屆時此分頁將自動顯示漲跌幅排行。<br>目前「現在去抓誰」已依優先度排序，供你預先規劃抓寵路線。</p></div></td></tr>';
+    return;
+  }
+  renderAlerts(aid,[]);
+  buildEcoTabs(which,items);
+  s.filtered=items;
+  renderEcoTable(which);
+}
+function buildEcoTabs(which,items){
+  const el=document.getElementById(which+'-eco-tabs');
+  if(!el)return;
+  const types=[...new Set(items.map(i=>i.label))];
+  if(!types.length){el.innerHTML='';return;}
+  const s=state[which];const isTeal=which==='cur';
+  el.innerHTML=['全部',...types].map(t=>{
+    const val=t==='全部'?null:t;
+    const act=val===s.type?' active'+(isTeal?' teal':''):'';
+    return '<button class="eco-tab'+act+'" onclick="switchEcoType(''+which+'',''+escHtml(t)+'')">'+escHtml(t)+'</button>';
+  }).join('');
+}
+function switchEcoType(which,label){state[which].type=label==='全部'?null:label;applyFilter(which);buildEcoTabs(which,state[which].items);renderEcoTable(which);}
+function filterEco(which){applyFilter(which);renderEcoTable(which);}
+function applyFilter(which){
+  const s=state[which];
+  const q=(document.getElementById(which+'-eco-search')?.value||'').toLowerCase();
+  s.filtered=s.items.filter(i=>{
+    if(s.type&&i.label!==s.type)return false;
+    if(q&&!i.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+function sortEco(which,key){
+  const s=state[which];
+  if(s.sort.key===key)s.sort.dir*=-1;else{s.sort.key=key;s.sort.dir=-1;}
+  renderEcoTable(which);
+}
+function renderEcoTable(which){
+  const s=state[which];
+  const tbody=document.getElementById(which+'-eco-tbody');
+  const cnt=document.getElementById(which+'-eco-count');
+  if(!tbody)return;
+  const sorted=[...s.filtered].sort((a,b)=>{
+    const av=a[s.sort.key]??0,bv=b[s.sort.key]??0;
+    return typeof av==='string'?av.localeCompare(bv)*s.sort.dir:(av-bv)*s.sort.dir;
+  });
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="6" class="empty">查無符合物品</td></tr>';if(cnt)cnt.textContent='';return;}
+  tbody.innerHTML=sorted.slice(0,100).map(item=>
+    '<tr><td class="item-name">'+escHtml(item.name)+'</td><td class="item-type">'+escHtml(item.label)+'</td><td class="chaos-val">'+item.chaos+'c</td><td>'+fmtChange(item.change_1d)+'</td><td>'+fmtChange(item.change_7d)+'</td><td class="vol">'+item.volume+'</td></tr>'
+  ).join('');
+  if(cnt)cnt.textContent=sorted.length>100?'顯示前 100 筆，共 '+sorted.length+' 筆':'共 '+sorted.length+' 筆';
+}
+function renderMiniTables(buy,sell){
+  const be=document.getElementById('buy-table'),se=document.getElementById('sell-table');
+  if(be)be.innerHTML=buy.length?miniTable(buy,'pos'):'<div class="empty">無符合條件物品（或聯盟尚未開始）</div>';
+  if(se)se.innerHTML=sell.length?miniTable(sell,'neg'):'<div class="empty">無符合條件物品</div>';
+}
+function miniTable(items,mode){
+  const rows=items.slice(0,8).map(i=>{
+    const cls=mode==='pos'?'change-pos':'change-neg';const sg=i.change_1d>0?'+':'';
+    return '<tr><td class="item-name">'+escHtml(i.name)+'</td><td class="item-type">'+escHtml(i.label)+'</td><td class="chaos-val">'+i.chaos+'c</td><td><span class="'+cls+'">'+sg+i.change_1d+'%</span></td></tr>';
+  }).join('');
+  return '<table class="eco-table"><thead><tr><th>物品</th><th>類型</th><th>混沌石</th><th>24h</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function renderAlerts(cid,alerts){
+  const w=document.getElementById(cid);if(!w)return;
+  w.innerHTML=alerts.map(a=>'<div class="alert '+escHtml(a.type)+'">'+(a.type==='warning'?'⚠️':a.type==='success'?'✅':'ℹ️')+' '+escHtml(a.msg)+'</div>').join('');
+}
+function showAlert(cid,type,msg){renderAlerts(cid,[{type,msg}]);}
+function renderHuntNow(order){
+  const el=document.getElementById('hunt-now');if(!el)return;
+  if(!order.length){el.innerHTML='<div class="empty">暫無建議</div>';return;}
+  const med=['🥇 首選','🥈 次選','🥉 備選'];
+  el.innerHTML=order.slice(0,3).map((b,i)=>{
+    const has=b.build_count>0||b.reddit_count>0;
+    const reason=has?'poe.ninja 角色使用 '+b.build_count+' 個 ／ Reddit 提及 '+b.reddit_count+' 次':'優先度「'+escHtml(b.priority)+'」，'+escHtml(b.stage)+'必抓目標';
+    return '<div class="hunt-card"><div class="rank">'+med[i]+'</div><div class="beast-name">'+escHtml(b.zh)+'</div><div class="beast-en">'+escHtml(b.en)+'</div><div class="reason">'+reason+'</div><div class="signal-badge">'+escHtml(b.signal||'⏳ 等待資料')+'</div></div>';
+  }).join('');
+}
+function renderCaptureOrder(order){
+  const el=document.getElementById('capture-order');if(!el)return;
+  if(!order.length){el.innerHTML='<div class="empty">暫無資料</div>';return;}
+  el.innerHTML=order.map((b,i)=>'<div class="order-item"><div class="order-num">'+(i+1)+'</div><div><div class="order-name">'+escHtml(b.zh)+'</div><div class="order-en">'+escHtml(b.en)+'</div></div><span class="beast-stage" style="margin:0">'+escHtml(b.stage)+'</span><div class="order-loc">'+escHtml(b.location)+'</div><span class="order-signal">'+escHtml(b.signal||'')+'</span></div>').join('');
+}
+function renderBeastStats(builds,reddit){
+  const bc=builds?.companion_counts||{};const rc=reddit?.beast_mention_counts||{};
+  for(const id of Object.keys(BEAST_META)){
+    const b=bc[id]??0,r=rc[id]??0;
+    const bEl=document.getElementById('stat-build-'+id);if(bEl){bEl.textContent='角色: '+b;bEl.className='beast-stat'+(b>0?' has-data':'');}
+    const rEl=document.getElementById('stat-reddit-'+id);if(rEl){rEl.textContent='討論: '+r;rEl.className='beast-stat'+(r>0?' has-data':'');}
+    const sEl=document.getElementById('signal-'+id);if(sEl){const t=b*2+r;sEl.textContent=t>=20?'🔥 爆熱':t>=8?'📈 上漲':t>=2?'👀 有人提及':'';}
+    const pt=document.getElementById('ptag-'+id);
+    if(pt){const meta=BEAST_META[id];if(meta){pt.className='priority-tag '+(PRIORITY_CLS[meta.priority]||'priority-mid');}}
+  }
+}
+function renderReddit(posts,status){
+  const el=document.getElementById('reddit-list');if(!el)return;
+  if(status==='error'){el.innerHTML='<div class="empty">⚠️ Reddit 資料取得失敗，請稍後再試。</div>';return;}
+  if(!posts.length){el.innerHTML='<div class="empty">目前無相關討論。</div>';return;}
+  el.innerHTML=posts.map(p=>{
+    const tags=(p.tags||[]).map(t=>{const m=BEAST_META[t];return m?'<span class="reddit-tag">'+escHtml(m.zh)+'</span>':''}).join('');
+    const ago=p.created_utc?timeAgo(p.created_utc):'';
+    return '<div class="reddit-post"><div class="reddit-score">'+(p.score??0)+'</div><div class="reddit-body"><a href="'+escHtml(p.url)+'" target="_blank" rel="noopener noreferrer" class="reddit-title">'+escHtml(p.title)+'</a><div class="reddit-meta"><span>r/'+escHtml(p.subreddit)+'</span><span>💬 '+(p.num_comments??0)+'</span>'+(ago?'<span>'+ago+'</span>':'')+'</div>'+(tags?'<div class="reddit-tags">'+tags+'</div>':'')+'</div></div>';
+  }).join('');
+}
+function timeAgo(utc){const d=Math.floor(Date.now()/1000)-utc;if(d<60)return d+'秒前';if(d<3600)return Math.floor(d/60)+'分鐘前';if(d<86400)return Math.floor(d/3600)+'小時前';return Math.floor(d/86400)+'天前';}
+function resetCountdown(){
+  if(countdownTimer)clearInterval(countdownTimer);countdownSec=AUTO_REFRESH_SEC;
+  const el=document.getElementById('countdown');
+  countdownTimer=setInterval(()=>{
+    countdownSec--;
+    if(el){const m=String(Math.floor(countdownSec/60)).padStart(2,'0');const s=String(countdownSec%60).padStart(2,'0');el.textContent='下次更新 '+m+':'+s;}
+    if(countdownSec<=0){clearInterval(countdownTimer);loadData(false);}
+  },1000);
+}
+loadData(false);
+</script>
+</body>
+</html>

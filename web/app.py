@@ -1,7 +1,20 @@
+import threading
 from pathlib import Path
 
 import markdown
 from flask import Flask, render_template
+
+import re
+
+from monitor import (
+    BEAST_TARGETS,
+    CURRENT_LEAGUE_NAME,
+    LEAGUE_NAME,
+    fetch_builds,
+    fetch_economy,
+    fetch_reddit,
+    generate_recommendations,
+)
 
 app = Flask(__name__)
 
@@ -102,6 +115,67 @@ def home():
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
+
+# ── Spirit Walker 監控 ───────────────────────────────────────────────────────
+_refresh_lock = threading.Lock()
+
+
+@app.route("/monitor")
+def monitor():
+    return render_template(
+        "monitor.html",
+        beast_targets=BEAST_TARGETS,
+        league=LEAGUE_NAME,
+        current_league=CURRENT_LEAGUE_NAME,
+    )
+
+
+@app.route("/api/monitor/data")
+def monitor_data():
+    builds  = fetch_builds()
+    economy = fetch_economy()
+    reddit  = fetch_reddit()
+    recs    = generate_recommendations(builds, economy, reddit)
+    return {
+        "builds":          builds,
+        "economy":         economy,
+        "reddit":          reddit,
+        "recommendations": recs,
+        "league":          LEAGUE_NAME,
+    }
+
+
+@app.route("/api/monitor/economy/league/<league_name>")
+def monitor_economy_by_league(league_name: str):
+    """依聯盟名稱取得 economy 資料（供現有聯盟物價分頁使用）。"""
+    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
+        return {"status": "error", "message": "無效的聯盟名稱"}, 400
+    economy = fetch_economy(league=league_name)
+    return economy
+
+
+@app.route("/api/monitor/refresh", methods=["POST"])
+def monitor_refresh():
+    if not _refresh_lock.acquire(blocking=False):
+        return {"status": "busy", "message": "重新整理已在進行中，請稍候"}, 429
+    try:
+        builds  = fetch_builds(force=True)
+        economy = fetch_economy(force=True)
+        reddit  = fetch_reddit(force=True)
+        recs    = generate_recommendations(builds, economy, reddit)
+        return {
+            "status":          "ok",
+            "builds":          builds,
+            "economy":         economy,
+            "reddit":          reddit,
+            "recommendations": recs,
+            "league":          LEAGUE_NAME,
+        }
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}, 500
+    finally:
+        _refresh_lock.release()
 
 
 if __name__ == "__main__":
