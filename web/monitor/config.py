@@ -1,10 +1,10 @@
 # ── 聯盟設定 ─────────────────────────────────────────────────────────────────
-# 0.5 正式上線後，把 LEAGUE_NAME 改成實際聯盟名稱（例如 "Dawn" 或 GGG 公告的名字）
-LEAGUE_NAME = "Dawn"
+# POE2 當前開季聯盟（2026-05）- poe.ninja API 使用小寫 slug
+LEAGUE_NAME = "runesofaldur"  # Runes of Aldur
 
 # 目前仍在進行中的聯盟（0.5 開季前的聯盟），用於「現有聯盟物價表」分頁
-# poe.ninja PoE2 可用聯盟：Standard、Mercenaries 等
-CURRENT_LEAGUE_NAME = "Standard"
+# 注意：API 使用大寫開頭的聯盟名稱
+CURRENT_LEAGUE_NAME = "Standard"  # Standard（大寫）
 
 # ── Spirit Walker 抓寵目標 ────────────────────────────────────────────────────
 BEAST_TARGETS = [
@@ -93,12 +93,15 @@ ECONOMY_TYPES = [
 ]
 
 # poe.ninja PoE2 可用聯盟 slug（網址中的 league 名稱）
-# Active: Standard, Hardcore
+# Active: Runes of Aldur (2026-05)
 # Previous: Fate of the Vaal (vaal), HC Fate of the Vaal (vaalhc)
 POE2_LEAGUES = [
-    ("Standard",        "Standard"),
-    ("Hardcore",        "Hardcore"),
-    ("Fate of the Vaal", "vaal"),
+    ("Runes of Aldur",     "runesofaldur"),
+    ("HC Runes of Aldur",  "runesofaldurhc"),
+    ("Standard",           "standard"),
+    ("Hardcore",           "hardcore"),
+    ("Fate of the Vaal",   "vaal"),
+    ("HC Fate of the Vaal", "vaalhc"),
 ]
 
 # ── PoE1 設定 ─────────────────────────────────────────────────────────────────

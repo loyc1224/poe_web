@@ -35,6 +35,7 @@ CATEGORY_LABELS = {
     "crafting": "做裝",
     "beetle": "甲蟲",
     "builds": "流派",
+    "storyline": "主線劇情",
 }
 
 
