@@ -184,19 +184,19 @@
 
 ### 穿越後完整流程圖（上）
 
-![穿越後流程圖1](https://truth.bahamut.com.tw/s01/202510/forum/82273/1bbdd6ea3af1714006294b70380e945b.JPG)
+![穿越後流程圖1](/static/poe2/images/storyline/act4-part1.jpg)
 
 ### 穿越後完整流程圖（下）
 
-![穿越後流程圖2](https://truth.bahamut.com.tw/s01/202510/forum/82273/b8803b90d0289cf0381df779ce4456ca.JPG)
+![穿越後流程圖2](/static/poe2/images/storyline/act4-part2.jpg)
 
 ### 第四章完整流程圖
 
-![第四章流程圖](https://truth.bahamut.com.tw/s01/202510/forum/82273/0c471615656e2d822c8880d4eb24cc11.JPG)
+![第四章流程圖](/static/poe2/images/storyline/act4-flowchart.jpg)
 
 ### 間章完整流程圖
 
-![間章流程圖](https://truth.bahamut.com.tw/s01/202510/forum/82273/b6b3d5bc61aa91d608f78fe760246998.JPG)
+![間章流程圖](/static/poe2/images/storyline/interlude-flowchart.jpg)
 
 ---
 
