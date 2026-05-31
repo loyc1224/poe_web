@@ -603,11 +603,20 @@
             <p class="list-subheading">Path of Exile 2 &middot; {{ trade_links.poe2|length }} 個常用交易連結</p>
             <div class="card-list">
               {% for item in trade_links.poe2 %}
-              <a href="{{ item.url }}" target="_blank" class="doc-card poe2-card" style="text-decoration:none;cursor:pointer;">
+              <a href="{{ item.url }}" target="_blank" class="doc-card poe2-card" style="text-decoration:none;cursor:pointer;display:flex;align-items:center;">
                 <div class="doc-card-accent"></div>
+                {% if item.icon %}
+                <img src="{{ item.icon }}" alt="{{ item.name }}" style="width:48px;height:48px;object-fit:contain;margin:12px;flex-shrink:0;" onerror="this.style.display='none'">
+                {% endif %}
                 <div class="doc-card-body">
                   <h3>{{ item.name }}</h3>
                   <p>{{ item.description }}</p>
+                  {% if item.price_chaos or item.price_exalted %}
+                  <p style="font-weight:bold;color:#daa520;margin:4px 0;">
+                    {% if item.price_chaos %}💰 約 {{ item.price_chaos }}{% endif %}
+                    {% if item.price_exalted %} / {{ item.price_exalted }} Ex{% endif %}
+                  </p>
+                  {% endif %}
                   <div class="doc-meta">{{ item.category }} &middot; 開啟交易網站 ↗</div>
                 </div>
               </a>
@@ -623,11 +632,20 @@
             <p class="list-subheading">Path of Exile 1 &middot; {{ trade_links.poe1|length }} 個常用交易連結</p>
             <div class="card-list">
               {% for item in trade_links.poe1 %}
-              <a href="{{ item.url }}" target="_blank" class="doc-card poe1-card" style="text-decoration:none;cursor:pointer;">
+              <a href="{{ item.url }}" target="_blank" class="doc-card poe1-card" style="text-decoration:none;cursor:pointer;display:flex;align-items:center;">
                 <div class="doc-card-accent"></div>
+                {% if item.icon %}
+                <img src="{{ item.icon }}" alt="{{ item.name }}" style="width:48px;height:48px;object-fit:contain;margin:12px;flex-shrink:0;" onerror="this.style.display='none'">
+                {% endif %}
                 <div class="doc-card-body">
                   <h3>{{ item.name }}</h3>
                   <p>{{ item.description }}</p>
+                  {% if item.price_chaos or item.price_exalted %}
+                  <p style="font-weight:bold;color:#daa520;margin:4px 0;">
+                    {% if item.price_chaos %}💰 約 {{ item.price_chaos }}{% endif %}
+                    {% if item.price_exalted %} / {{ item.price_exalted }} Ex{% endif %}
+                  </p>
+                  {% endif %}
                   <div class="doc-meta">{{ item.category }} &middot; 開啟交易網站 ↗</div>
                 </div>
               </a>
