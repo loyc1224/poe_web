@@ -1,6 +1,7 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
+import json
 
 import markdown
 from flask import Flask, render_template, Response, request, abort
@@ -111,10 +112,23 @@ def load_games() -> list[dict[str, object]]:
     return games
 
 
+def load_trade_links() -> dict:
+    """載入快速交易連結配置"""
+    trade_links_file = CONTENT_DIR / "trade_links.json"
+    if not trade_links_file.exists():
+        return {"poe1": [], "poe2": []}
+    try:
+        with open(trade_links_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"poe1": [], "poe2": []}
+
+
 @app.route("/")
 def home():
     games = load_games()
-    return render_template("index.html", games=games)
+    trade_links = load_trade_links()
+    return render_template("index.html", games=games, trade_links=trade_links)
 
 
 @app.route("/health")

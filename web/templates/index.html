@@ -531,12 +531,26 @@
                 <span class="category-name">拓荒篩選</span>
               </span>
             </button>
+            <button class="category-button poe2-cat" type="button" data-category-target="poe2-trade">
+              <span class="cat-icon">💎</span>
+              <span class="category-label-row">
+                <span class="category-name">快速交易</span>
+              </span>
+            </button>
             <a class="category-button poe2-cat" href="/monitor" style="text-decoration:none">
               <span class="cat-icon">🦅</span>
               <span class="category-label-row">
                 <span class="category-name">開季監控</span>
               </span>
             </a>
+            {% endif %}
+            {% if game.id == 'poe1' %}
+            <button class="category-button poe1-cat" type="button" data-category-target="poe1-trade">
+              <span class="cat-icon">💰</span>
+              <span class="category-label-row">
+                <span class="category-name">快速交易</span>
+              </span>
+            </button>
             {% endif %}
           </div>
           {% endfor %}
@@ -581,6 +595,46 @@
                   <div class="doc-meta">拓荒 / 找裝備用</div>
                 </div>
               </button>
+            </div>
+          </div>
+          <!-- POE2 快速交易 -->
+          <div class="category-panel" data-category-panel="poe2-trade" style="display:none">
+            <h2 class="list-heading">💎 快速交易</h2>
+            <p class="list-subheading">Path of Exile 2 &middot; {{ trade_links.poe2|length }} 個常用交易連結</p>
+            <div class="card-list">
+              {% for item in trade_links.poe2 %}
+              <a href="{{ item.url }}" target="_blank" class="doc-card poe2-card" style="text-decoration:none;cursor:pointer;">
+                <div class="doc-card-accent"></div>
+                <div class="doc-card-body">
+                  <h3>{{ item.name }}</h3>
+                  <p>{{ item.description }}</p>
+                  <div class="doc-meta">{{ item.category }} &middot; 開啟交易網站 ↗</div>
+                </div>
+              </a>
+              {% endfor %}
+              {% if not trade_links.poe2 %}
+              <div class="empty">尚未新增任何交易連結</div>
+              {% endif %}
+            </div>
+          </div>
+          <!-- POE1 快速交易 -->
+          <div class="category-panel" data-category-panel="poe1-trade" style="display:none">
+            <h2 class="list-heading">💰 快速交易</h2>
+            <p class="list-subheading">Path of Exile 1 &middot; {{ trade_links.poe1|length }} 個常用交易連結</p>
+            <div class="card-list">
+              {% for item in trade_links.poe1 %}
+              <a href="{{ item.url }}" target="_blank" class="doc-card poe1-card" style="text-decoration:none;cursor:pointer;">
+                <div class="doc-card-accent"></div>
+                <div class="doc-card-body">
+                  <h3>{{ item.name }}</h3>
+                  <p>{{ item.description }}</p>
+                  <div class="doc-meta">{{ item.category }} &middot; 開啟交易網站 ↗</div>
+                </div>
+              </a>
+              {% endfor %}
+              {% if not trade_links.poe1 %}
+              <div class="empty">尚未新增任何交易連結</div>
+              {% endif %}
             </div>
           </div>
         {% endif %}
