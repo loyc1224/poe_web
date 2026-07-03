@@ -434,7 +434,7 @@
       letter-spacing: 0.04em;
     }
     .kw-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .kw-chip {
+    .kw-chip, .kw-chip-ws {
       display: inline-flex;
       align-items: center;
       border-radius: 10px;
@@ -443,10 +443,19 @@
       overflow: hidden;
       transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
     }
+    .kw-chip-ws {
+      border-color: rgba(45,212,191,0.25);
+      background: rgba(45,212,191,0.07);
+    }
     .kw-chip.active {
       border-color: rgba(167,139,250,0.7);
       background: rgba(167,139,250,0.22);
       box-shadow: 0 0 10px rgba(167,139,250,0.2);
+    }
+    .kw-chip-ws.active {
+      border-color: rgba(45,212,191,0.7);
+      background: rgba(45,212,191,0.22);
+      box-shadow: 0 0 10px rgba(45,212,191,0.2);
     }
     .chip-label {
       padding: 7px 12px;
@@ -456,9 +465,14 @@
       user-select: none;
     }
     .kw-chip.active .chip-label { color: #c4b5fd; font-weight: 600; }
+    .kw-chip-ws.active .chip-label { color: #2dd4bf; font-weight: 600; }
     .kw-chip:has(.chip-label:hover) {
       border-color: rgba(167,139,250,0.5);
       background: rgba(167,139,250,0.14);
+    }
+    .kw-chip-ws:has(.chip-label:hover) {
+      border-color: rgba(45,212,191,0.5);
+      background: rgba(45,212,191,0.14);
     }
     .chip-copy-btn {
       padding: 7px 10px;
@@ -489,6 +503,23 @@
       z-index: 9999;
     }
     .copy-toast.show { opacity: 1; transform: translateY(0); }
+    /* ── POE1 FILTER (amber) ────────────────── */
+    .p1-filter-builder { background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.25); border-radius:16px; padding:16px 20px; margin:0 0 28px; }
+    .p1-filter-label { font-size:11px; font-weight:700; color:#fbbf24; letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px; }
+    .p1-filter-display { font-family:"Courier New",Courier,monospace; font-size:16px; background:rgba(2,6,16,.6); border-radius:10px; padding:12px 16px; min-height:46px; word-break:break-all; margin-bottom:12px; color:#fcd34d; }
+    .p1-tab-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+    .p1-tab { padding:6px 16px; border-radius:10px; border:1px solid rgba(245,158,11,0.25); background:rgba(245,158,11,0.06); color:#fbbf24; font-size:13px; font-weight:600; cursor:pointer; transition:.15s; }
+    .p1-tab.active { background:rgba(245,158,11,0.22); border-color:rgba(245,158,11,0.6); box-shadow:0 0 10px rgba(245,158,11,0.18); }
+    .p1-tab:hover:not(.active) { background:rgba(245,158,11,0.12); }
+    .kw-chip-p1 { display:inline-flex; align-items:center; border-radius:10px; border:1px solid rgba(245,158,11,0.25); background:rgba(245,158,11,0.07); overflow:hidden; transition:border-color .15s,background .15s,box-shadow .15s; }
+    .kw-chip-p1.active { border-color:rgba(245,158,11,0.7); background:rgba(245,158,11,0.22); box-shadow:0 0 10px rgba(245,158,11,0.2); }
+    .kw-chip-p1:has(.chip-label:hover) { border-color:rgba(245,158,11,0.5); background:rgba(245,158,11,0.14); }
+    .kw-chip-p1.active .chip-label { color:#fcd34d; font-weight:600; }
+    .kw-chip-p1 .chip-copy-btn { border-left-color:rgba(245,158,11,0.18); }
+    .kw-chip-p1 .chip-copy-btn:hover { background:rgba(245,158,11,0.2); color:#fbbf24; }
+    .p1-copy-btn { background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:#fbbf24; }
+    .p1-copy-btn:hover { background:rgba(245,158,11,0.28); }
+    .kw-group-title-p1 { font-size:13px; font-weight:700; color:#fbbf24; margin-bottom:10px; letter-spacing:.04em; }
   </style>
 </head>
 <body>
@@ -524,6 +555,14 @@
               </span>
             </button>
             {% endfor %}
+            {% if game.id == 'poe1' %}
+            <button class="category-button poe1-cat" type="button" data-category-target="poe1-tools">
+              <span class="cat-icon">🔍</span>
+              <span class="category-label-row">
+                <span class="category-name">裝備篩選</span>
+              </span>
+            </button>
+            {% endif %}
             {% if game.id == 'poe2' %}
             <button class="category-button poe2-cat" type="button" data-category-target="poe2-tools">
               <span class="cat-icon">🔍</span>
@@ -569,6 +608,20 @@
             {% set ns.first = false %}
             {% endfor %}
           {% endfor %}
+          <div class="category-panel" data-category-panel="poe1-tools" style="display:none">
+            <h2 class="list-heading">🔍 裝備篩選</h2>
+            <p class="list-subheading">Path of Exile 1 &middot; 商店搜尋工具</p>
+            <div class="card-list">
+              <button class="doc-card poe1-card" type="button" data-doc-target="poe1-shop-filter" data-doc-category="poe1-tools">
+                <div class="doc-card-accent"></div>
+                <div class="doc-card-body">
+                  <h3>裝備篩選關鍵字</h3>
+                  <p>依分類（持續 / 火焰 / 等級+1 / 移動）篩選關鍵字，組合後複製貼入遊戲搜尋框</p>
+                  <div class="doc-meta">PoE1 / 找裝備用</div>
+                </div>
+              </button>
+            </div>
+          </div>
           <div class="category-panel" data-category-panel="poe2-tools" style="display:none">
             <h2 class="list-heading">🔍 拓荒篩選</h2>
             <p class="list-subheading">Path of Exile 2 &middot; 商店搜尋工具</p>
@@ -601,6 +654,78 @@
               {% endfor %}
             {% endfor %}
           {% endfor %}
+          <!-- PoE1 裝備篩選工具 -->
+          <article class="doc-panel" data-doc-panel="poe1-shop-filter">
+            <div class="meta poe1-meta">🔥 Path of Exile 1 / 裝備篩選</div>
+            <h1>PoE1 裝備篩選工具</h1>
+            <p class="sf-desc">點擊關鍵字標籤將其加入篩選字串（可多選），完成後按「複製」貼入遊戲搜尋框；也可點右側 ⧉ 單獨複製單一關鍵字。<br>多個關鍵字以 <code>|</code> 分隔，可同時搜尋多條詞綴。</p>
+
+            <div class="p1-filter-builder">
+              <div class="p1-filter-label">篩選字串</div>
+              <div class="p1-filter-display empty-display" id="p1FilterDisplay">（點擊下方關鍵字加入）</div>
+              <div class="filter-actions">
+                <button class="filter-btn p1-copy-btn" id="copyP1FilterBtn">📋 複製</button>
+                <button class="filter-btn clear-btn" id="clearP1FilterBtn">✕ 清除</button>
+              </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div class="p1-tab-bar">
+              <button class="p1-tab active" data-p1-tab="all">全部</button>
+              <button class="p1-tab" data-p1-tab="duration">持續</button>
+              <button class="p1-tab" data-p1-tab="fire">火焰</button>
+              <button class="p1-tab" data-p1-tab="level">等級+1</button>
+              <button class="p1-tab" data-p1-tab="move">移動</button>
+            </div>
+
+            <div class="kw-section">
+              <!-- 移動 -->
+              <div class="kw-group" data-p1-group="move">
+                <div class="kw-group-title-p1">🏃 移動</div>
+                <div class="kw-chips">
+                  <div class="kw-chip-p1" data-kw="移動速度" data-tags="move"><span class="chip-label">移動速度</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <!-- 火焰 -->
+              <div class="kw-group" data-p1-group="fire">
+                <div class="kw-group-title-p1">🔥 火焰</div>
+                <div class="kw-chips">
+                  <div class="kw-chip-p1" data-kw="火焰傷害" data-tags="fire"><span class="chip-label">火焰傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="附加火焰" data-tags="fire"><span class="chip-label">附加火焰</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="燃燒傷害" data-tags="fire duration"><span class="chip-label">燃燒傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="點燃機率" data-tags="fire"><span class="chip-label">點燃機率</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="火焰穿透" data-tags="fire"><span class="chip-label">火焰穿透</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="火焰抗性" data-tags="fire"><span class="chip-label">火焰抗性</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <!-- 持續 -->
+              <div class="kw-group" data-p1-group="duration">
+                <div class="kw-group-title-p1">⏳ 持續</div>
+                <div class="kw-chips">
+                  <div class="kw-chip-p1" data-kw="持續傷害" data-tags="duration"><span class="chip-label">持續傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="持續效果" data-tags="duration"><span class="chip-label">持續效果</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="點燃持續" data-tags="duration fire"><span class="chip-label">點燃持續</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="毒素持續" data-tags="duration"><span class="chip-label">毒素持續</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="出血持續" data-tags="duration"><span class="chip-label">出血持續</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <!-- 等級+1 -->
+              <div class="kw-group" data-p1-group="level">
+                <div class="kw-group-title-p1">⭐ 等級 +1</div>
+                <div class="kw-chips">
+                  <div class="kw-chip-p1" data-kw="全部技能寶石等級" data-tags="level"><span class="chip-label">全技能等級</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="火焰技能寶石" data-tags="level fire"><span class="chip-label">火焰技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="冰冷技能寶石" data-tags="level"><span class="chip-label">冰冷技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="閃電技能寶石" data-tags="level"><span class="chip-label">閃電技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="弓箭技能寶石" data-tags="level"><span class="chip-label">弓箭技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-p1" data-kw="近戰技能寶石" data-tags="level"><span class="chip-label">近戰技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+            </div>
+          </article>
           <!-- 拓荒篩選工具 -->
           <article class="doc-panel" data-doc-panel="tool-shop-filter">
             <div class="meta poe2-meta">❄️ Path of Exile 2 / 拓荒篩選</div>
@@ -674,6 +799,29 @@
                   <div class="kw-chip" data-kw="閃電抗"><span class="chip-label">閃電抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="混沌抗"><span class="chip-label">混沌抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip" data-kw="全元素抗"><span class="chip-label">全元素抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                </div>
+              </div>
+
+              <div class="kw-group">
+                <div class="kw-group-title">🗺️ 換界石篩選</div>
+                <div class="filter-builder" style="margin:10px 0 12px">
+                  <div class="filter-builder-label">篩選字串</div>
+                  <div class="filter-display" id="wsFilterDisplay"></div>
+                  <div class="filter-actions">
+                    <button class="filter-btn copy-btn" id="copyWsFilterBtn">📋 複製</button>
+                    <button class="filter-btn clear-btn" id="clearWsFilterBtn">✕ 清除</button>
+                    <button class="filter-btn" id="resetWsFilterBtn" style="background:rgba(45,212,191,0.08);border-color:rgba(45,212,191,0.3);color:#2dd4bf">↺ 重置</button>
+                  </div>
+                </div>
+                <div class="kw-chips">
+                  <div class="kw-chip-ws" data-kw="物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">稀有度 ≥40%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="物品稀有度.*([8-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">稀有度 ≥80%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="怪物效能.*([3-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">怪物效能 ≥30%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="換界石抹落.*([1-9][0-9])"><span class="chip-label">換界石抹落 ≥10%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="物品數量"><span class="chip-label">物品數量</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="階級 14"><span class="chip-label">T14</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="階級 15"><span class="chip-label">T15</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  <div class="kw-chip-ws" data-kw="階級 16"><span class="chip-label">T16</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                 </div>
               </div>
             </div>
@@ -860,6 +1008,181 @@
         document.querySelectorAll('.kw-chip').forEach(c => c.classList.remove('active'));
         updateDisplay();
       });
+    })();
+
+    // ── WAYSTONE FILTER TOOL ──────────────────
+    (function () {
+      const wsDisplay = document.getElementById('wsFilterDisplay');
+      const copyBtn   = document.getElementById('copyWsFilterBtn');
+      const clearBtn  = document.getElementById('clearWsFilterBtn');
+      const resetBtn  = document.getElementById('resetWsFilterBtn');
+      if (!wsDisplay) return;
+
+      const WS_DEFAULT = [
+        '物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})',
+        '怪物效能.*([3-9][0-9]|[1-9][0-9]{2})',
+        '換界石抹落.*([1-9][0-9])'
+      ];
+      const activeWsKws = [...WS_DEFAULT];
+
+      function showToast(msg) {
+        let toast = document.getElementById('copyToast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'copyToast';
+          toast.className = 'copy-toast';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function updateWsDisplay() {
+        if (activeWsKws.length === 0) {
+          wsDisplay.textContent = '（點擊下方關鍵字加入）';
+          wsDisplay.classList.add('empty-display');
+        } else {
+          wsDisplay.textContent = activeWsKws.join('|');
+          wsDisplay.classList.remove('empty-display');
+        }
+      }
+
+      function applyActiveStyles() {
+        document.querySelectorAll('.kw-chip-ws').forEach(chip => {
+          chip.classList.toggle('active', activeWsKws.includes(chip.dataset.kw));
+        });
+      }
+
+      document.querySelectorAll('.kw-chip-ws').forEach(chip => {
+        const kw = chip.dataset.kw;
+        chip.querySelector('.chip-label').addEventListener('click', () => {
+          const idx = activeWsKws.indexOf(kw);
+          if (idx !== -1) { activeWsKws.splice(idx, 1); chip.classList.remove('active'); }
+          else            { activeWsKws.push(kw);       chip.classList.add('active'); }
+          updateWsDisplay();
+        });
+        chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+        });
+      });
+
+      copyBtn.addEventListener('click', () => {
+        if (activeWsKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
+        navigator.clipboard.writeText(activeWsKws.join('|')).then(() => showToast('換界石篩選已複製！'));
+      });
+
+      clearBtn.addEventListener('click', () => {
+        activeWsKws.length = 0;
+        document.querySelectorAll('.kw-chip-ws').forEach(c => c.classList.remove('active'));
+        updateWsDisplay();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        activeWsKws.length = 0;
+        activeWsKws.push(...WS_DEFAULT);
+        applyActiveStyles();
+        updateWsDisplay();
+      });
+
+      applyActiveStyles();
+      updateWsDisplay();
+    })();
+
+    // ── POE1 FILTER TOOL ─────────────────────
+    (function () {
+      const p1Display = document.getElementById('p1FilterDisplay');
+      const copyBtn   = document.getElementById('copyP1FilterBtn');
+      const clearBtn  = document.getElementById('clearP1FilterBtn');
+      if (!p1Display) return;
+
+      const P1_DEFAULT = [
+        '移動速度',
+        '火焰傷害', '附加火焰', '燃燒傷害', '點燃機率', '火焰穿透', '火焰抗性',
+        '持續傷害', '持續效果', '點燃持續', '毒素持續', '出血持續',
+        '全部技能寶石等級', '火焰技能寶石', '冰冷技能寶石', '閃電技能寶石', '弓箭技能寶石', '近戰技能寶石'
+      ];
+      const activeKws = [...P1_DEFAULT];
+
+      function showToast(msg) {
+        let toast = document.getElementById('copyToast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'copyToast';
+          toast.className = 'copy-toast';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function updateDisplay() {
+        if (activeKws.length === 0) {
+          p1Display.textContent = '（點擊下方關鍵字加入）';
+          p1Display.classList.add('empty-display');
+        } else {
+          p1Display.textContent = activeKws.join('|');
+          p1Display.classList.remove('empty-display');
+        }
+      }
+
+      document.querySelectorAll('.kw-chip-p1').forEach(chip => {
+        const kw = chip.dataset.kw;
+        if (P1_DEFAULT.includes(kw)) chip.classList.add('active');
+        chip.querySelector('.chip-label').addEventListener('click', () => {
+          const idx = activeKws.indexOf(kw);
+          if (idx !== -1) { activeKws.splice(idx, 1); chip.classList.remove('active'); }
+          else            { activeKws.push(kw);       chip.classList.add('active'); }
+          updateDisplay();
+        });
+        chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+        });
+      });
+
+      copyBtn.addEventListener('click', () => {
+        if (activeKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
+        navigator.clipboard.writeText(activeKws.join('|')).then(() => showToast('PoE1 篩選字串已複製！'));
+      });
+
+      clearBtn.addEventListener('click', () => {
+        activeKws.length = 0;
+        document.querySelectorAll('.kw-chip-p1').forEach(c => c.classList.remove('active'));
+        updateDisplay();
+      });
+
+      // Tab filtering
+      document.querySelectorAll('.p1-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.p1-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          const filter = tab.dataset.p1Tab;
+
+          document.querySelectorAll('[data-p1-group]').forEach(group => {
+            if (filter === 'all') {
+              group.style.display = '';
+              group.querySelectorAll('.kw-chip-p1').forEach(c => c.style.display = '');
+            } else {
+              const chips = [...group.querySelectorAll('.kw-chip-p1')];
+              let anyVisible = false;
+              chips.forEach(chip => {
+                const tags = (chip.dataset.tags || '').split(' ');
+                const show = tags.includes(filter);
+                chip.style.display = show ? '' : 'none';
+                if (show) anyVisible = true;
+              });
+              group.style.display = anyVisible ? '' : 'none';
+            }
+          });
+        });
+      });
+
+      updateDisplay();
     })();
   </script>
 </body>
