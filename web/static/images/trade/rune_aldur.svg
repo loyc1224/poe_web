@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="runeGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#2ecc71;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#27ae60;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="128" height="128" fill="#1a1a1a" rx="8"/>
+  
+  <!-- 綠色符文圓形 -->
+  <circle cx="64" cy="64" r="40" fill="url(#runeGradient)"/>
+  
+  <!-- 符文紋路 -->
+  <path d="M 64 30 L 64 98 M 40 64 L 88 64" stroke="#ecf0f1" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="8" fill="#ecf0f1"/>
+  
+  <!-- 裝飾線條 -->
+  <circle cx="64" cy="64" r="35" fill="none" stroke="#ecf0f1" stroke-width="1" opacity="0.3"/>
+  <circle cx="64" cy="64" r="30" fill="none" stroke="#ecf0f1" stroke-width="1" opacity="0.2"/>
+</svg>
