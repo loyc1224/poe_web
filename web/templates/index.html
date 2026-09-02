@@ -102,6 +102,29 @@
       background-clip: text;
     }
     .hero p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 14px; }
+    .traffic-panel {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .traffic-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.45);
+      font-size: 13px;
+      color: #dbeafe;
+      backdrop-filter: blur(6px);
+    }
+    .traffic-value {
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
     /* ── LAYOUT ────────────────────────────── */
     .layout {
       display: grid;
@@ -532,6 +555,11 @@
           <div class="badge">★ POE 知識庫 &middot; 流派 / 策略 / 做裝</div>
           <h1>POE 知識庫</h1>
           <p>左側選遊戲版本與分類，中間檢視文件，右側閱讀內容。新增 Markdown 放進對應資料夾即可自動出現。</p>
+          <div class="traffic-panel">
+            <div class="traffic-pill">總瀏覽：<span class="traffic-value">{{ traffic_stats.total_views }}</span></div>
+            <div class="traffic-pill">今日訪客：<span class="traffic-value">{{ traffic_stats.daily_uniques }}</span></div>
+            <div class="traffic-pill">日期：<span class="traffic-value">{{ traffic_stats.day }}</span></div>
+          </div>
         </div>
       </div>
     </header>
@@ -864,65 +892,16 @@
             </div>
 
             <div class="kw-section">
+              {% for group in shop_filters.poe2.shop_groups %}
               <div class="kw-group">
-                <div class="kw-group-title">🏃 移動</div>
+                <div class="kw-group-title">{{ group.title }}</div>
                 <div class="kw-chips">
-                  <div class="kw-chip" data-kw="移動速"><span class="chip-label">移動速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="速度"><span class="chip-label">速度</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  {% for kw in group.keywords %}
+                  <div class="kw-chip" data-kw="{{ kw.kw }}"><span class="chip-label">{{ kw.label }}</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  {% endfor %}
                 </div>
               </div>
-
-              <div class="kw-group">
-                <div class="kw-group-title">⚔️ 攻擊</div>
-                <div class="kw-chips">
-                  <div class="kw-chip" data-kw="攻擊速"><span class="chip-label">攻擊速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="物理傷害"><span class="chip-label">物理傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="%\s物理傷"><span class="chip-label">%\s物理傷</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="附加"><span class="chip-label">附加</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="暴擊率"><span class="chip-label">暴擊率</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="暴擊傷害"><span class="chip-label">暴擊傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                </div>
-              </div>
-
-              <div class="kw-group">
-                <div class="kw-group-title">🔮 法術</div>
-                <div class="kw-chips">
-                  <div class="kw-chip" data-kw="法術傷害"><span class="chip-label">法術傷害</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="施法速"><span class="chip-label">施法速</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="技能等級"><span class="chip-label">技能等級</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="近戰技"><span class="chip-label">近戰技</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                </div>
-              </div>
-
-              <div class="kw-group">
-                <div class="kw-group-title">❤️ 生存</div>
-                <div class="kw-chips">
-                  <div class="kw-chip" data-kw="最大生命"><span class="chip-label">最大生命</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="大生"><span class="chip-label">大生</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="能量護盾"><span class="chip-label">能量護盾</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="最大魔力"><span class="chip-label">最大魔力</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="護甲"><span class="chip-label">護甲</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="閃避"><span class="chip-label">閃避</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                </div>
-              </div>
-
-              <div class="kw-group">
-                <div class="kw-group-title">⭐ 裝備</div>
-                <div class="kw-chips">
-                  <div class="kw-chip" data-kw="品質"><span class="chip-label">品質</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                </div>
-              </div>
-
-              <div class="kw-group">
-                <div class="kw-group-title">🛡️ 抗性</div>
-                <div class="kw-chips">
-                  <div class="kw-chip" data-kw="火焰抗"><span class="chip-label">火焰抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="冰冷抗"><span class="chip-label">冰冷抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="閃電抗"><span class="chip-label">閃電抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="混沌抗"><span class="chip-label">混沌抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip" data-kw="全元素抗"><span class="chip-label">全元素抗</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                </div>
-              </div>
+              {% endfor %}
 
               <div class="kw-group">
                 <div class="kw-group-title">🗺️ 換界石篩選</div>
@@ -936,14 +915,9 @@
                   </div>
                 </div>
                 <div class="kw-chips">
-                  <div class="kw-chip-ws" data-kw="物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">稀有度 ≥40%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="物品稀有度.*([8-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">稀有度 ≥80%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="怪物效能.*([3-9][0-9]|[1-9][0-9]{2})"><span class="chip-label">怪物效能 ≥30%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="換界石抹落.*([1-9][0-9])"><span class="chip-label">換界石抹落 ≥10%</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="物品數量"><span class="chip-label">物品數量</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="階級 14"><span class="chip-label">T14</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="階級 15"><span class="chip-label">T15</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
-                  <div class="kw-chip-ws" data-kw="階級 16"><span class="chip-label">T16</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  {% for kw in shop_filters.poe2.waystone_keywords %}
+                  <div class="kw-chip-ws" data-kw="{{ kw.kw }}"><span class="chip-label">{{ kw.label }}</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
+                  {% endfor %}
                 </div>
               </div>
             </div>
@@ -1066,7 +1040,7 @@
       const clearFilterBtn = document.getElementById('clearFilterBtn');
       if (!filterDisplay) return;
 
-      const DEFAULT_KWS = ['附加', '速度', '%\\s物理傷', '品質', '近戰技', '大生'];
+      const DEFAULT_KWS = {{ shop_filters.poe2.shop_defaults|tojson }};
       const activeKws = [...DEFAULT_KWS];
 
       function updateDisplay() {
@@ -1140,11 +1114,7 @@
       const resetBtn  = document.getElementById('resetWsFilterBtn');
       if (!wsDisplay) return;
 
-      const WS_DEFAULT = [
-        '物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})',
-        '怪物效能.*([3-9][0-9]|[1-9][0-9]{2})',
-        '換界石抹落.*([1-9][0-9])'
-      ];
+      const WS_DEFAULT = {{ shop_filters.poe2.waystone_defaults|tojson }};
       const activeWsKws = [...WS_DEFAULT];
 
       function showToast(msg) {

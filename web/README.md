@@ -20,6 +20,15 @@ python app.py
 
 健康檢查：`http://127.0.0.1:5000/health`
 
+## 3-1) 商店篩選設定（文件化）
+
+- 設定檔：`content/shop_filters.json`
+- POE2 商店篩選與換界石篩選會從這個檔案讀取並產生前端按鈕
+- 商店正則可直接維持英文（例如：`bow|mov|[egdl] da.* to a`）
+
+相關說明文件：
+- `content/poe2/strategy/poe2-regex-filter-spec.md`
+
 ## 4) 部署到 Google Cloud Run（同專案 ID）
 
 預設使用：

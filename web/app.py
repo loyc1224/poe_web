@@ -2,6 +2,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 import json
+import sqlite3
+import hashlib
+from datetime import date
 
 import markdown
 from flask import Flask, render_template, Response, request, abort
@@ -25,6 +28,8 @@ app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 CONTENT_DIR = BASE_DIR / "content"
+TRAFFIC_DB = BASE_DIR / "cache" / "traffic.db"
+_traffic_lock = threading.Lock()
 
 GAME_LABELS = {
     "poe1": "Path of Exile 1",
@@ -124,16 +129,129 @@ def load_trade_links() -> dict:
         return {"poe1": [], "poe2": []}
 
 
+def load_shop_filters() -> dict:
+    """載入商店/換界石篩選配置（由文件生成前端篩選按鈕）"""
+    filters_file = CONTENT_DIR / "shop_filters.json"
+    fallback = {
+        "poe2": {
+            "shop_defaults": [],
+            "shop_groups": [],
+            "waystone_defaults": [],
+            "waystone_keywords": [],
+        }
+    }
+    if not filters_file.exists():
+        return fallback
+    try:
+        with open(filters_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return fallback
+
+
+def _ensure_traffic_db() -> None:
+    TRAFFIC_DB.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(TRAFFIC_DB) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS traffic_stats (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                total_views INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS traffic_daily_uniques (
+                day TEXT NOT NULL,
+                visitor_hash TEXT NOT NULL,
+                PRIMARY KEY (day, visitor_hash)
+            )
+            """
+        )
+        conn.execute("INSERT OR IGNORE INTO traffic_stats (id, total_views) VALUES (1, 0)")
+
+
+def _get_client_ip(req) -> str:
+    xff = req.headers.get("X-Forwarded-For", "").strip()
+    if xff:
+        return xff.split(",")[0].strip()
+    return (req.remote_addr or "unknown").strip()
+
+
+def record_home_visit(req) -> dict:
+    """記錄首頁流量並回傳統計（總瀏覽、今日不重複訪客）。"""
+    _ensure_traffic_db()
+    today = date.today().isoformat()
+    ip = _get_client_ip(req)
+    ua = (req.headers.get("User-Agent") or "")[:200]
+    visitor_hash = hashlib.sha256(f"{ip}|{ua}".encode("utf-8")).hexdigest()
+
+    with _traffic_lock:
+        with sqlite3.connect(TRAFFIC_DB) as conn:
+            conn.execute("UPDATE traffic_stats SET total_views = total_views + 1 WHERE id = 1")
+            conn.execute(
+                "INSERT OR IGNORE INTO traffic_daily_uniques (day, visitor_hash) VALUES (?, ?)",
+                (today, visitor_hash),
+            )
+            total_views = conn.execute(
+                "SELECT total_views FROM traffic_stats WHERE id = 1"
+            ).fetchone()[0]
+            daily_uniques = conn.execute(
+                "SELECT COUNT(*) FROM traffic_daily_uniques WHERE day = ?",
+                (today,),
+            ).fetchone()[0]
+
+    return {
+        "total_views": total_views,
+        "daily_uniques": daily_uniques,
+        "day": today,
+    }
+
+
+def get_traffic_stats() -> dict:
+    """取得流量統計（不增加計數）。"""
+    _ensure_traffic_db()
+    today = date.today().isoformat()
+    with sqlite3.connect(TRAFFIC_DB) as conn:
+        total_views = conn.execute(
+            "SELECT total_views FROM traffic_stats WHERE id = 1"
+        ).fetchone()[0]
+        daily_uniques = conn.execute(
+            "SELECT COUNT(*) FROM traffic_daily_uniques WHERE day = ?",
+            (today,),
+        ).fetchone()[0]
+    return {
+        "total_views": total_views,
+        "daily_uniques": daily_uniques,
+        "day": today,
+    }
+
+
 @app.route("/")
 def home():
     games = load_games()
     trade_links = load_trade_links()
-    return render_template("index.html", games=games, trade_links=trade_links)
+    shop_filters = load_shop_filters()
+    traffic_stats = record_home_visit(request)
+    return render_template(
+        "index.html",
+        games=games,
+        trade_links=trade_links,
+        shop_filters=shop_filters,
+        traffic_stats=traffic_stats,
+    )
 
 
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.route("/api/traffic")
+def traffic():
+    """首頁流量統計 API。"""
+    return {"status": "ok", "traffic": get_traffic_stats()}
 
 
 @app.route("/api/img-proxy")
