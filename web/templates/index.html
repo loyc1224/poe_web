@@ -618,6 +618,20 @@
                 <span class="category-name">快速交易</span>
               </span>
             </button>
+            <a class="category-button poe1-cat" href="/pricer?game=poe1" style="text-decoration:none">
+              <span class="cat-icon">📊</span>
+              <span class="category-label-row">
+                <span class="category-name">通貨查價</span>
+              </span>
+            </a>
+            {% endif %}
+            {% if game.id == 'poe2' %}
+            <a class="category-button poe2-cat" href="/pricer?game=poe2" style="text-decoration:none">
+              <span class="cat-icon">📊</span>
+              <span class="category-label-row">
+                <span class="category-name">通貨查價</span>
+              </span>
+            </a>
             {% endif %}
           </div>
           {% endfor %}

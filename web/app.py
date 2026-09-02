@@ -23,6 +23,8 @@ from monitor import (
     fetch_reddit,
     generate_recommendations,
 )
+from monitor.config import POE2_LEAGUES, POE1_STANDARD
+from monitor.translations import NAME_ZH
 
 app = Flask(__name__)
 
@@ -246,6 +248,62 @@ def home():
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.route("/pricer")
+def pricer():
+    """PoE1 / PoE2 通貨查價頁。"""
+    game = (request.args.get("game") or "poe2").strip().lower()
+    if game not in ("poe1", "poe2"):
+        game = "poe2"
+
+    return render_template(
+        "pricer.html",
+        active_game=game,
+        poe2_default_league=CURRENT_LEAGUE_NAME,
+        poe1_default_league=POE1_LEAGUE,
+        poe2_leagues=POE2_LEAGUES,
+        poe1_leagues=[POE1_LEAGUE, POE1_STANDARD],
+    )
+
+
+@app.route("/api/pricer/currency")
+def pricer_currency():
+    """統一查價 API：game=poe1|poe2，league=聯盟名。"""
+    game = (request.args.get("game") or "poe2").strip().lower()
+    league = (request.args.get("league") or "").strip()
+    force = (request.args.get("force") or "").strip().lower() in ("1", "true", "yes")
+
+    if game not in ("poe1", "poe2"):
+        return {"status": "error", "message": "無效的 game 參數，僅支援 poe1 / poe2"}, 400
+
+    if league and not re.match(r"^[A-Za-z0-9 _\-]{1,60}$", league):
+        return {"status": "error", "message": "無效的聯盟名稱"}, 400
+
+    if game == "poe2":
+        target_league = league or LEAGUE_NAME
+        data = fetch_economy(league=target_league, force=force)
+        # 若預設開季聯盟暫無資料，自動回退到目前常駐聯盟，避免查價頁空表。
+        if not league and not (data.get("items") or []):
+            target_league = CURRENT_LEAGUE_NAME
+            data = fetch_economy(league=target_league, force=force)
+    else:
+        target_league = league or POE1_LEAGUE
+        data = fetch_poe1_economy(league=target_league, force=force)
+
+    items = data.get("items", [])
+    for item in items:
+        if not item.get("zh"):
+            item["zh"] = NAME_ZH.get(item.get("name", ""), "")
+
+    return {
+        "status": data.get("status", "ok"),
+        "game": game,
+        "league": target_league,
+        "fetched_at": data.get("fetched_at"),
+        "errors": data.get("errors", []),
+        "items": items,
+    }
 
 
 @app.route("/api/traffic")

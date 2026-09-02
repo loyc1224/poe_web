@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PoE 通貨查價 | POE 知識庫</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(10, 18, 32, 0.72);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22d3ee;
+      --accent2: #60a5fa;
+      --ok: #4ade80;
+      --up: #22c55e;
+      --down: #f87171;
+      --gold: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(80% 45% at 10% 0%, rgba(34,211,238,0.09), transparent),
+        radial-gradient(70% 50% at 90% 0%, rgba(96,165,250,0.1), transparent),
+        #07111f;
+    }
+    .shell {
+      width: min(1480px, calc(100% - 24px));
+      margin: 14px auto 24px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(7, 17, 31, 0.9);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+    .topbar {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(2, 6, 16, 0.45);
+      font-size: 13px;
+    }
+    .topbar a { color: var(--muted); text-decoration: none; }
+    .topbar a:hover { color: var(--text); }
+    .hero {
+      padding: 24px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.2));
+    }
+    .hero h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      background: linear-gradient(90deg, #67e8f9, #f8fafc, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p { margin: 0; color: var(--muted); }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+      background: rgba(3, 10, 20, 0.45);
+    }
+    .game-switch { display: flex; gap: 8px; }
+    .gbtn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .gbtn.active {
+      color: #67e8f9;
+      border-color: rgba(34,211,238,0.45);
+      background: rgba(34,211,238,0.1);
+    }
+    select, input {
+      border: 1px solid var(--line);
+      background: rgba(2, 6, 16, 0.6);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+    }
+    input { min-width: 220px; }
+    .btn {
+      border: 1px solid rgba(34,211,238,0.4);
+      background: rgba(34,211,238,0.1);
+      color: #67e8f9;
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn:hover { background: rgba(34,211,238,0.18); }
+
+    .meta {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .category-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .ctab {
+      border: 1px solid var(--line);
+      background: rgba(148,163,184,0.06);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .ctab.active {
+      color: #67e8f9;
+      border-color: rgba(34,211,238,0.45);
+      background: rgba(34,211,238,0.12);
+    }
+
+    .table-wrap { overflow: auto; padding: 0 24px 24px; }
+    table { width: 100%; border-collapse: collapse; min-width: 1080px; }
+    th, td { border-bottom: 1px solid rgba(148,163,184,0.1); padding: 10px 8px; }
+    th {
+      color: var(--muted);
+      text-align: left;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+      letter-spacing: 0.04em;
+    }
+    td { font-size: 13px; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .item-cell { display: flex; align-items: center; gap: 10px; }
+    .icon {
+      width: 30px; height: 30px; object-fit: contain;
+      background: rgba(0,0,0,0.2); border-radius: 6px; padding: 3px;
+      border: 1px solid rgba(148,163,184,0.14);
+    }
+    .name { font-weight: 700; }
+    .zh { color: var(--gold); }
+    .chg-up { color: var(--up); font-weight: 700; }
+    .chg-down { color: var(--down); font-weight: 700; }
+    .chg-flat { color: var(--muted); }
+    .rate { color: #93c5fd; }
+    .count { padding: 8px 24px 16px; color: var(--muted); font-size: 12px; }
+    .error { color: #fca5a5; }
+
+    @media (max-width: 960px) {
+      .controls { grid-template-columns: 1fr; }
+      input { min-width: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <a href="/">POE 知識庫</a>
+      <span>›</span>
+      <a href="/monitor">開季監控</a>
+      <span>›</span>
+      <span>通貨查價</span>
+    </div>
+
+    <div class="hero">
+      <h1>PoE1 / PoE2 通貨查價</h1>
+      <p>查詢模式比照 poepricer：中文名稱優先顯示，英文作為輔助，並提供匯率箭頭格式快速判讀。</p>
+    </div>
+
+    <div class="controls">
+      <div class="game-switch">
+        <button id="btn-poe2" class="gbtn">POE2</button>
+        <button id="btn-poe1" class="gbtn">POE1</button>
+      </div>
+      <select id="leagueSelect"></select>
+      <input id="searchInput" type="text" placeholder="輸入中文名稱搜尋（例：神聖石、崇高石）...">
+      <button id="refreshBtn" class="btn">重新抓取</button>
+    </div>
+
+    <div class="meta">
+      <span>狀態：<strong id="statusText">載入中...</strong></span>
+      <span>更新時間：<strong id="timeText">-</strong></span>
+      <span>聯盟：<strong id="leagueText">-</strong></span>
+      <span id="errorText" class="error"></span>
+    </div>
+
+    <div class="category-tabs" id="categoryTabs"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th data-sort="zh">名稱（中文）</th>
+            <th data-sort="name">英文</th>
+            <th data-sort="label">分類</th>
+            <th data-sort="chaos">單價</th>
+            <th data-sort="rate">換算</th>
+            <th data-sort="change_1d">24h</th>
+            <th data-sort="change_7d">7d</th>
+            <th data-sort="volume">掛單量</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="count" id="countText"></div>
+  </div>
+
+  <script>
+    const poe2LeagueOptions = {{ poe2_leagues|tojson }};
+    const poe1LeagueOptions = {{ poe1_leagues|tojson }};
+
+    const state = {
+      game: {{ active_game|tojson }},
+      league: '',
+      category: '通貨',
+      search: '',
+      sortKey: 'chaos',
+      sortDir: 'desc',
+      items: [],
+      errors: [],
+      fetchedAt: null,
+    };
+
+    const btnPoe2 = document.getElementById('btn-poe2');
+    const btnPoe1 = document.getElementById('btn-poe1');
+    const leagueSelect = document.getElementById('leagueSelect');
+    const searchInput = document.getElementById('searchInput');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const categoryTabs = document.getElementById('categoryTabs');
+    const tbody = document.getElementById('tbody');
+
+    function iconUrl(path) {
+      if (!path) return '';
+      return path.startsWith('/gen/image/') ? `/api/img-proxy?path=${encodeURIComponent(path)}` : path;
+    }
+
+    function chgClass(v) {
+      if (v > 0) return 'chg-up';
+      if (v < 0) return 'chg-down';
+      return 'chg-flat';
+    }
+
+    function setStatus(status, league, fetchedAt, errors) {
+      document.getElementById('statusText').textContent = status;
+      document.getElementById('leagueText').textContent = league || '-';
+      document.getElementById('timeText').textContent = fetchedAt ? new Date(fetchedAt * 1000).toLocaleString() : '-';
+      document.getElementById('errorText').textContent = errors && errors.length ? `錯誤: ${errors.join(' | ')}` : '';
+    }
+
+    function setActiveGameButtons() {
+      btnPoe2.classList.toggle('active', state.game === 'poe2');
+      btnPoe1.classList.toggle('active', state.game === 'poe1');
+    }
+
+    function fillLeagueOptions() {
+      leagueSelect.innerHTML = '';
+      if (state.game === 'poe2') {
+        for (const [label, slug] of poe2LeagueOptions) {
+          const op = document.createElement('option');
+          op.value = slug;
+          op.textContent = label;
+          leagueSelect.appendChild(op);
+        }
+        if (!state.league) state.league = {{ poe2_default_league|tojson }};
+      } else {
+        for (const lg of poe1LeagueOptions) {
+          const op = document.createElement('option');
+          op.value = lg;
+          op.textContent = lg;
+          leagueSelect.appendChild(op);
+        }
+        if (!state.league) state.league = {{ poe1_default_league|tojson }};
+      }
+      leagueSelect.value = state.league;
+    }
+
+    function buildCategoryTabs() {
+      const labels = [...new Set(state.items.map(x => x.label).filter(Boolean))];
+      const all = ['all', ...labels];
+      if (!all.includes(state.category)) {
+        state.category = labels.includes('通貨') ? '通貨' : 'all';
+      }
+      categoryTabs.innerHTML = '';
+      for (const label of all) {
+        const btn = document.createElement('button');
+        btn.className = 'ctab' + (state.category === label ? ' active' : '');
+        btn.textContent = label === 'all' ? '全部' : label;
+        btn.onclick = () => {
+          state.category = label;
+          buildCategoryTabs();
+          renderTable();
+        };
+        categoryTabs.appendChild(btn);
+      }
+    }
+
+    function sortedItems(items) {
+      const dir = state.sortDir === 'asc' ? 1 : -1;
+      return [...items].sort((a, b) => {
+        const ka = a[state.sortKey];
+        const kb = b[state.sortKey];
+        if (typeof ka === 'number' && typeof kb === 'number') return (ka - kb) * dir;
+        return String(ka || '').localeCompare(String(kb || '')) * dir;
+      });
+    }
+
+    function displayName(item) {
+      return item.zh || '（待翻譯）';
+    }
+
+    function renderTable() {
+      const q = state.search.trim().toLowerCase();
+      let rows = state.items.filter(x => {
+        if (state.category !== 'all' && x.label !== state.category) return false;
+        if (!q) return true;
+        return [x.zh, x.name, x.label, x.type].join(' ').toLowerCase().includes(q);
+      });
+
+      rows = sortedItems(rows);
+
+      tbody.innerHTML = rows.map(item => {
+        const price = Number(item.chaos || 0);
+        const rate = Number(item.rate || 0);
+        const priceText = state.game === 'poe2'
+          ? `${price.toFixed(4)} Divine`
+          : `${price.toFixed(2)} Chaos`;
+        const shownName = displayName(item);
+        const englishName = item.name || '-';
+        const exchangeText = state.game === 'poe2'
+          ? (price > 0 ? `${price.toFixed(4)} Divine → 1 ${shownName}` : '-')
+          : (price > 0 ? `${price.toFixed(2)} Chaos → 1 ${shownName}` : '-');
+        return `
+          <tr>
+            <td>${item.icon ? `<img class="icon" src="${iconUrl(item.icon)}" alt="${item.name}" loading="lazy">` : ''}</td>
+            <td><div class="item-cell"><span class="name">${shownName}</span></div></td>
+            <td class="zh">${englishName}</td>
+            <td>${item.label || item.type || '-'}</td>
+            <td>${priceText}</td>
+            <td class="rate">${exchangeText}</td>
+            <td class="${chgClass(Number(item.change_1d || 0))}">${Number(item.change_1d || 0).toFixed(1)}%</td>
+            <td class="${chgClass(Number(item.change_7d || 0))}">${Number(item.change_7d || 0).toFixed(1)}%</td>
+            <td>${Number(item.volume || 0).toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="color:#94a3b8;padding:20px">沒有符合條件的資料</td></tr>';
+      }
+
+      document.getElementById('countText').textContent = `顯示 ${rows.length} / ${state.items.length} 筆`;
+    }
+
+    async function loadData(force = false) {
+      setStatus('載入中...', state.league, null, []);
+      const url = `/api/pricer/currency?game=${encodeURIComponent(state.game)}&league=${encodeURIComponent(state.league)}${force ? '&force=1' : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      state.items = data.items || [];
+      state.errors = data.errors || [];
+      state.fetchedAt = data.fetched_at || null;
+
+      if (!state.items.length && state.category !== 'all') state.category = 'all';
+      buildCategoryTabs();
+      renderTable();
+      setStatus(data.status || 'ok', data.league || state.league, state.fetchedAt, state.errors);
+    }
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.onclick = () => {
+        const key = th.dataset.sort;
+        if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        else { state.sortKey = key; state.sortDir = 'desc'; }
+        renderTable();
+      };
+    });
+
+    btnPoe2.onclick = async () => {
+      if (state.game === 'poe2') return;
+      state.game = 'poe2';
+      state.category = '通貨';
+      state.league = '';
+      setActiveGameButtons();
+      fillLeagueOptions();
+      await loadData();
+    };
+
+    btnPoe1.onclick = async () => {
+      if (state.game === 'poe1') return;
+      state.game = 'poe1';
+      state.category = '通貨';
+      state.league = '';
+      setActiveGameButtons();
+      fillLeagueOptions();
+      await loadData();
+    };
+
+    leagueSelect.onchange = async () => {
+      state.league = leagueSelect.value;
+      await loadData();
+    };
+
+    searchInput.oninput = () => {
+      state.search = searchInput.value;
+      renderTable();
+    };
+
+    refreshBtn.onclick = async () => {
+      await loadData(true);
+    };
+
+    async function init() {
+      setActiveGameButtons();
+      fillLeagueOptions();
+      await loadData();
+    }
+
+    init();
+  </script>
+</body>
+</html>

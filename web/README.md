@@ -18,7 +18,11 @@ python app.py
 
 開啟：`http://127.0.0.1:5000`
 
+通貨查價頁：`http://127.0.0.1:5000/pricer`
+
 健康檢查：`http://127.0.0.1:5000/health`
+
+查價 API：`/api/pricer/currency?game=poe2|poe1&league=<league>`
 
 ## 3-1) 商店篩選設定（文件化）
 
