@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 
 from .config import BEAST_TARGETS, CACHE_TTL, ECONOMY_TYPES, LEAGUE_NAME, POE1_ECONOMY_TYPES, POE1_LEAGUE
-from .translations import ITEM_ZH, NAME_ZH
+from .translations import ITEM_ZH
 
 # ── 快取目錄 ─────────────────────────────────────────────────────────────────
 CACHE_DIR = Path(__file__).resolve().parent.parent / "cache"
@@ -332,10 +332,9 @@ def fetch_economy(league: str = LEAGUE_NAME, force: bool = False) -> dict:
                 if prev and curr:
                     change_1d = round((curr - prev) / abs(prev) * 100, 1)
             pv = line.get("primaryValue") or 0
-            zh_name = ITEM_ZH.get(item_id) or NAME_ZH.get(name, "")
             result_items.append({
                 "name":      name,
-                "zh":        zh_name,
+                "zh":        ITEM_ZH.get(item_id, ""),
                 "type":      item_type,
                 "label":     label,
                 "chaos":     round(pv, 4),            # divine price per item
@@ -413,10 +412,9 @@ def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
                 prev, curr = valid[-2], valid[-1]
                 if prev and curr:
                     change_1d = round((curr - prev) / abs(prev) * 100, 1)
-            zh_name = ITEM_ZH.get(item_id) or NAME_ZH.get(name, "")
             result_items.append({
                 "name":      name,
-                "zh":        zh_name,
+                "zh":        ITEM_ZH.get(item_id, ""),
                 "type":      item_type,
                 "label":     label,
                 "chaos":     round(chaos_val, 2),
@@ -491,10 +489,9 @@ def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
                 prev, curr = valid[-2], valid[-1]
                 if prev and curr:
                     change_1d = round((curr - prev) / abs(prev) * 100, 1)
-            zh_name = ITEM_ZH.get(item_id) or NAME_ZH.get(name, "")
             result_items.append({
                 "name":      name,
-                "zh":        zh_name,
+                "zh":        ITEM_ZH.get(item_id, ""),
                 "type":      item_type,
                 "label":     label,
                 "chaos":     round(chaos_val, 2),

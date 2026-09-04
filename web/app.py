@@ -3,11 +3,17 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 import json
 import sqlite3
+import secrets
 import hashlib
+import time
+import os
+import base64
 from datetime import date
+from urllib.parse import urlencode, quote_plus
 
 import markdown
-from flask import Flask, render_template, Response, request, abort
+import requests
+from flask import Flask, render_template, Response, request, abort, redirect, session
 
 import re
 
@@ -24,14 +30,24 @@ from monitor import (
     generate_recommendations,
 )
 from monitor.config import POE2_LEAGUES, POE1_STANDARD
-from monitor.translations import NAME_ZH
+from monitor.translations import ITEM_ZH
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", os.getenv("SECRET_KEY", "dev-insecure-change-me"))
 
 BASE_DIR = Path(__file__).resolve().parent
 CONTENT_DIR = BASE_DIR / "content"
 TRAFFIC_DB = BASE_DIR / "cache" / "traffic.db"
+STASH_DB = BASE_DIR / "cache" / "stash.db"
 _traffic_lock = threading.Lock()
+_stash_lock = threading.Lock()
+
+OAUTH_AUTHORIZE_URL = "https://pathofexile.tw/oauth/authorize"
+OAUTH_TOKEN_URL = "https://pathofexile.tw/oauth/token"
+OAUTH_CLIENT_ID = os.getenv("POE_TW_CLIENT_ID", "").strip()
+OAUTH_SCOPE = "account:profile account:leagues account:stashes account:characters"
+OAUTH_REDIRECT_URI = os.getenv("POE_TW_REDIRECT_URI", "").strip()
+OAUTH_STATE_TTL_SECONDS = 600
 
 GAME_LABELS = {
     "poe1": "Path of Exile 1",
@@ -174,6 +190,517 @@ def _ensure_traffic_db() -> None:
         conn.execute("INSERT OR IGNORE INTO traffic_stats (id, total_views) VALUES (1, 0)")
 
 
+def _ensure_stash_db() -> None:
+    STASH_DB.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(STASH_DB) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stash_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at REAL NOT NULL,
+                total_divine REAL NOT NULL,
+                included_tabs INTEGER NOT NULL,
+                source TEXT NOT NULL DEFAULT 'manual'
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stash_state (
+                id INTEGER PRIMARY KEY,
+                account_name TEXT NOT NULL DEFAULT '',
+                game TEXT NOT NULL DEFAULT 'poe2',
+                league TEXT NOT NULL DEFAULT '',
+                tabs_json TEXT NOT NULL DEFAULT '[]',
+                raw_json TEXT NOT NULL DEFAULT '{}',
+                updated_at REAL NOT NULL DEFAULT 0
+            )
+            """
+        )
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(stash_state)").fetchall()]
+        if "raw_json" not in columns:
+            conn.execute("ALTER TABLE stash_state ADD COLUMN raw_json TEXT NOT NULL DEFAULT '{}'")
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oauth_pkce_states (
+                state TEXT PRIMARY KEY,
+                code_verifier TEXT NOT NULL,
+                created_at REAL NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oauth_tokens (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_at REAL NOT NULL DEFAULT 0,
+                token_type TEXT NOT NULL DEFAULT 'Bearer'
+            )
+            """
+        )
+
+
+def _b64url(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _build_pkce_pair() -> tuple[str, str]:
+    code_verifier = _b64url(secrets.token_bytes(32))
+    challenge = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    code_challenge = _b64url(challenge)
+    return code_verifier, code_challenge
+
+
+def _save_pkce_state(state: str, code_verifier: str) -> None:
+    _ensure_stash_db()
+    cutoff = time.time() - (OAUTH_STATE_TTL_SECONDS * 2)
+    with _stash_lock:
+        with sqlite3.connect(STASH_DB) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO oauth_pkce_states (state, code_verifier, created_at) VALUES (?, ?, ?)",
+                (state, code_verifier, time.time()),
+            )
+            conn.execute("DELETE FROM oauth_pkce_states WHERE created_at < ?", (cutoff,))
+
+
+def _resolve_oauth_redirect_uri() -> str:
+    """回呼位址優先採環境變數，否則使用目前站台 host。"""
+    if OAUTH_REDIRECT_URI:
+        return OAUTH_REDIRECT_URI
+    return request.host_url.rstrip("/") + "/callback"
+
+
+def _validate_oauth_config() -> str | None:
+    if not OAUTH_CLIENT_ID:
+        return "missing+POE_TW_CLIENT_ID"
+    uri = _resolve_oauth_redirect_uri()
+    if not (uri.startswith("http://") or uri.startswith("https://")):
+        return "invalid+POE_TW_REDIRECT_URI"
+    # The public poepricer client id is bound to its production callback only.
+    if OAUTH_CLIENT_ID == "poetwpricer" and uri != "https://www.poepricer.com/callback":
+        return "client_redirect_mismatch+poetwpricer"
+    return None
+
+
+def _pop_pkce_verifier(state: str) -> str | None:
+    _ensure_stash_db()
+    with _stash_lock:
+        with sqlite3.connect(STASH_DB) as conn:
+            row = conn.execute(
+                "SELECT code_verifier, created_at FROM oauth_pkce_states WHERE state = ?",
+                (state,),
+            ).fetchone()
+            conn.execute("DELETE FROM oauth_pkce_states WHERE state = ?", (state,))
+    if not row:
+        return None
+    created_at = float(row[1])
+    if time.time() - created_at > OAUTH_STATE_TTL_SECONDS:
+        return None
+    return row[0]
+
+
+def _save_tokens(token_payload: dict) -> None:
+    _ensure_stash_db()
+    expires_in = int(token_payload.get("expires_in") or 0)
+    expires_at = time.time() + max(expires_in, 0)
+    with _stash_lock:
+        with sqlite3.connect(STASH_DB) as conn:
+            conn.execute(
+                """
+                INSERT INTO oauth_tokens (id, access_token, refresh_token, expires_at, token_type)
+                VALUES (1, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    access_token=excluded.access_token,
+                    refresh_token=excluded.refresh_token,
+                    expires_at=excluded.expires_at,
+                    token_type=excluded.token_type
+                """,
+                (
+                    token_payload.get("access_token", ""),
+                    token_payload.get("refresh_token"),
+                    expires_at,
+                    token_payload.get("token_type", "Bearer"),
+                ),
+            )
+
+
+def _clear_tokens() -> None:
+    _ensure_stash_db()
+    with _stash_lock:
+        with sqlite3.connect(STASH_DB) as conn:
+            conn.execute("DELETE FROM oauth_tokens WHERE id = 1")
+
+
+def _load_tokens() -> dict | None:
+    _ensure_stash_db()
+    with sqlite3.connect(STASH_DB) as conn:
+        row = conn.execute(
+            "SELECT access_token, refresh_token, expires_at, token_type FROM oauth_tokens WHERE id = 1"
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "access_token": row[0],
+        "refresh_token": row[1],
+        "expires_at": float(row[2] or 0),
+        "token_type": row[3] or "Bearer",
+    }
+
+
+def _refresh_access_token(refresh_token: str) -> dict:
+    if not OAUTH_CLIENT_ID:
+        raise RuntimeError("missing POE_TW_CLIENT_ID")
+    token_resp = requests.post(
+        OAUTH_TOKEN_URL,
+        data={
+            "grant_type": "refresh_token",
+            "client_id": OAUTH_CLIENT_ID,
+            "refresh_token": refresh_token,
+        },
+        timeout=12,
+        headers={"Accept": "application/json"},
+    )
+    if token_resp.status_code >= 400:
+        raise RuntimeError(f"refresh token failed: {token_resp.status_code}")
+    payload = token_resp.json()
+    _save_tokens(payload)
+    return payload
+
+
+def _get_valid_access_token() -> str | None:
+    tokens = _load_tokens()
+    if not tokens:
+        return None
+    if time.time() < tokens["expires_at"] - 30:
+        return tokens["access_token"]
+    if tokens.get("refresh_token"):
+        try:
+            payload = _refresh_access_token(tokens["refresh_token"])
+            return payload.get("access_token")
+        except Exception:
+            return None
+    return None
+
+
+def _normalize_tab(tab: dict, index: int) -> dict:
+    value = tab.get("value_divine")
+    if value is None:
+        value = tab.get("divine_value")
+    if value is None:
+        value = tab.get("value")
+    try:
+        value_divine = float(value or 0)
+    except Exception:
+        value_divine = 0.0
+
+    return {
+        "name": tab.get("name") or tab.get("label") or f"Tab {index + 1}",
+        "color": tab.get("color") or tab.get("colour") or "",
+        "enabled": bool(tab.get("enabled", True)),
+        "value_divine": value_divine,
+    }
+
+
+def _extract_stash_payload(payload: object, default_game: str, default_league: str) -> dict | None:
+    if isinstance(payload, list):
+        tabs = payload
+        account = ""
+        game = default_game
+        league = default_league
+    elif isinstance(payload, dict):
+        tabs = payload.get("tabs") or payload.get("stashes") or payload.get("items")
+        if not isinstance(tabs, list):
+            return None
+        account = payload.get("account") or payload.get("accountName") or ""
+        game = (payload.get("game") or default_game or "poe2").lower()
+        league = payload.get("league") or default_league
+    else:
+        return None
+
+    normalized_tabs = []
+    for index, item in enumerate(tabs):
+        if isinstance(item, dict):
+            normalized_tabs.append(_normalize_tab(item, index))
+
+    return {
+        "account_name": str(account or ""),
+        "game": game,
+        "league": str(league or ""),
+        "tabs": normalized_tabs,
+    }
+
+
+def _save_stash_state(
+    account_name: str,
+    game: str,
+    league: str,
+    tabs: list[dict],
+    source: str,
+    raw_payload: object | None = None,
+) -> dict:
+    _ensure_stash_db()
+    now = time.time()
+    total_divine = sum(float(t.get("value_divine") or 0) for t in tabs if t.get("enabled", True))
+    included_tabs = sum(1 for t in tabs if t.get("enabled", True))
+
+    with _stash_lock:
+        with sqlite3.connect(STASH_DB) as conn:
+            conn.execute(
+                """
+                INSERT INTO stash_state (id, account_name, game, league, tabs_json, raw_json, updated_at)
+                VALUES (1, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    account_name=excluded.account_name,
+                    game=excluded.game,
+                    league=excluded.league,
+                    tabs_json=excluded.tabs_json,
+                    raw_json=excluded.raw_json,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    account_name,
+                    game,
+                    league,
+                    json.dumps(tabs, ensure_ascii=False),
+                    json.dumps(raw_payload if raw_payload is not None else {}, ensure_ascii=False),
+                    now,
+                ),
+            )
+            conn.execute(
+                "INSERT INTO stash_snapshots (created_at, total_divine, included_tabs, source) VALUES (?, ?, ?, ?)",
+                (now, total_divine, included_tabs, source),
+            )
+
+    return {
+        "account_name": account_name,
+        "game": game,
+        "league": league,
+        "tabs": tabs,
+        "updated_at": now,
+        "total_divine": total_divine,
+        "included_tabs": included_tabs,
+    }
+
+
+def _sync_stash_with_token(access_token: str, game: str, league: str) -> dict:
+    endpoints = [
+        "https://pathofexile.tw/api/trade2/account/stashes",
+        "https://pathofexile.tw/api/account/stashes",
+    ]
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+    }
+
+    errors: list[str] = []
+    unauthorized_hits = 0
+    for endpoint in endpoints:
+        try:
+            resp = requests.get(endpoint, params={"game": game, "league": league}, headers=headers, timeout=15)
+            if resp.status_code == 401:
+                unauthorized_hits += 1
+                errors.append(f"{endpoint} => 401")
+                continue
+            if resp.status_code >= 400:
+                errors.append(f"{endpoint} => {resp.status_code}")
+                continue
+            payload = resp.json()
+            parsed = _extract_stash_payload(payload, game, league)
+            if not parsed:
+                errors.append(f"{endpoint} => invalid payload")
+                continue
+            return _save_stash_state(
+                parsed["account_name"],
+                parsed["game"],
+                parsed["league"],
+                parsed["tabs"],
+                source="oauth",
+                raw_payload=payload,
+            )
+        except Exception as exc:
+            errors.append(f"{endpoint} => {exc}")
+
+    if unauthorized_hits == len(endpoints):
+        _clear_tokens()
+        raise RuntimeError("授權已失效或 access token 無效，請重新登入後再同步。")
+
+    raise RuntimeError("; ".join(errors) or "stash sync failed")
+
+
+def _read_stash_state() -> dict | None:
+    _ensure_stash_db()
+    with sqlite3.connect(STASH_DB) as conn:
+        row = conn.execute(
+            "SELECT account_name, game, league, tabs_json, updated_at FROM stash_state WHERE id = 1"
+        ).fetchone()
+    if not row:
+        return None
+    tabs_json = row[3] or "[]"
+    try:
+        tabs = json.loads(tabs_json)
+    except Exception:
+        tabs = []
+    return {
+        "account_name": row[0],
+        "game": row[1],
+        "league": row[2],
+        "tabs": tabs,
+        "updated_at": float(row[4] or 0),
+    }
+
+
+def _read_stash_raw_payload() -> object | None:
+    _ensure_stash_db()
+    with sqlite3.connect(STASH_DB) as conn:
+        row = conn.execute("SELECT raw_json FROM stash_state WHERE id = 1").fetchone()
+    if not row:
+        return None
+    raw_json = row[0] or "{}"
+    try:
+        return json.loads(raw_json)
+    except Exception:
+        return None
+
+
+def _to_number(value: object, fallback: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return fallback
+
+
+def _pick_name(item: dict) -> str:
+    for key in ("displayName", "name", "typeLine", "baseType"):
+        value = str(item.get(key) or "").strip()
+        if value:
+            return value
+    return "Unknown"
+
+
+def _pick_category(item: dict) -> str:
+    for key in ("itemClass", "category", "type", "className"):
+        value = str(item.get(key) or "").strip()
+        if value:
+            return value
+    return "Other"
+
+
+def _is_resource_item_candidate(item: dict) -> bool:
+    if not isinstance(item, dict):
+        return False
+    has_name = any(str(item.get(k) or "").strip() for k in ("displayName", "name", "typeLine", "baseType"))
+    has_item_shape = any(k in item for k in ("stackSize", "inventoryId", "itemClass", "frameType", "icon", "typeLine", "baseType"))
+    return has_name and has_item_shape
+
+
+def _normalize_resource_item(item: dict, tab_name: str) -> dict:
+    quantity = 1.0
+    for key in ("stackSize", "stack", "amount", "count", "quantity", "qty"):
+        if key in item:
+            quantity = max(_to_number(item.get(key), 1.0), 0.0)
+            break
+    if quantity <= 0:
+        quantity = 1.0
+
+    value_divine = 0.0
+    for key in ("value_divine", "divineValue", "valueDivine"):
+        if key in item:
+            value_divine = max(_to_number(item.get(key), 0.0), 0.0)
+            break
+
+    return {
+        "name": _pick_name(item),
+        "category": _pick_category(item),
+        "quantity": quantity,
+        "value_divine": value_divine,
+        "tab_name": tab_name or "Unknown",
+    }
+
+
+def _collect_resource_items(node: object, tab_name: str, out: list[dict]) -> None:
+    if isinstance(node, dict):
+        if _is_resource_item_candidate(node):
+            out.append(_normalize_resource_item(node, tab_name))
+            return
+
+        next_tab = tab_name
+        node_name = str(node.get("name") or node.get("label") or "").strip()
+        if node_name and any(isinstance(node.get(k), list) for k in ("items", "contents", "inventory")):
+            next_tab = node_name
+
+        for value in node.values():
+            _collect_resource_items(value, next_tab, out)
+        return
+
+    if isinstance(node, list):
+        for value in node:
+            _collect_resource_items(value, tab_name, out)
+
+
+def _build_stash_resource_stats(raw_payload: object) -> dict:
+    collected: list[dict] = []
+    _collect_resource_items(raw_payload, "", collected)
+
+    merged: dict[tuple[str, str], dict] = {}
+    for item in collected:
+        key = (item["name"], item["category"])
+        bucket = merged.setdefault(
+            key,
+            {
+                "name": item["name"],
+                "category": item["category"],
+                "quantity": 0.0,
+                "value_divine": 0.0,
+                "tabs": set(),
+            },
+        )
+        bucket["quantity"] += item["quantity"]
+        bucket["value_divine"] += item["value_divine"]
+        bucket["tabs"].add(item["tab_name"])
+
+    resources = []
+    for bucket in merged.values():
+        resources.append(
+            {
+                "name": bucket["name"],
+                "category": bucket["category"],
+                "quantity": round(bucket["quantity"], 4),
+                "value_divine": round(bucket["value_divine"], 4),
+                "tab_count": len(bucket["tabs"]),
+            }
+        )
+
+    resources.sort(key=lambda x: (x["value_divine"], x["quantity"]), reverse=True)
+
+    category_totals: dict[str, dict] = {}
+    for row in resources:
+        cat = row["category"] or "Other"
+        agg = category_totals.setdefault(cat, {"category": cat, "kinds": 0, "quantity": 0.0, "value_divine": 0.0})
+        agg["kinds"] += 1
+        agg["quantity"] += row["quantity"]
+        agg["value_divine"] += row["value_divine"]
+
+    categories = [
+        {
+            "category": v["category"],
+            "kinds": v["kinds"],
+            "quantity": round(v["quantity"], 4),
+            "value_divine": round(v["value_divine"], 4),
+        }
+        for v in category_totals.values()
+    ]
+    categories.sort(key=lambda x: (x["value_divine"], x["quantity"]), reverse=True)
+
+    return {
+        "resources": resources,
+        "categories": categories,
+        "resource_count": len(resources),
+        "item_instances": len(collected),
+    }
+
+
 def _get_client_ip(req) -> str:
     xff = req.headers.get("X-Forwarded-For", "").strip()
     if xff:
@@ -283,7 +810,6 @@ def pricer_currency():
     if game == "poe2":
         target_league = league or LEAGUE_NAME
         data = fetch_economy(league=target_league, force=force)
-        # 若預設開季聯盟暫無資料，自動回退到目前常駐聯盟，避免查價頁空表。
         if not league and not (data.get("items") or []):
             target_league = CURRENT_LEAGUE_NAME
             data = fetch_economy(league=target_league, force=force)
@@ -294,7 +820,9 @@ def pricer_currency():
     items = data.get("items", [])
     for item in items:
         if not item.get("zh"):
-            item["zh"] = NAME_ZH.get(item.get("name", ""), "")
+            item_id = item.get("id", "")
+            item_name = item.get("name", "")
+            item["zh"] = ITEM_ZH.get(item_id, ITEM_ZH.get(item_name, ""))
 
     return {
         "status": data.get("status", "ok"),
@@ -303,6 +831,169 @@ def pricer_currency():
         "fetched_at": data.get("fetched_at"),
         "errors": data.get("errors", []),
         "items": items,
+    }
+
+
+@app.route("/api/pricer/oauth/start")
+def pricer_oauth_start():
+    config_error = _validate_oauth_config()
+    if config_error:
+        return redirect(f"/pricer?oauth=error&message={config_error}", code=302)
+
+    state = secrets.token_urlsafe(24)
+    code_verifier, code_challenge = _build_pkce_pair()
+    session["oauth_state"] = state
+    session["oauth_code_verifier"] = code_verifier
+    session["oauth_state_created_at"] = time.time()
+    _save_pkce_state(state, code_verifier)
+    redirect_uri = _resolve_oauth_redirect_uri()
+
+    params = {
+        "response_type": "code",
+        "client_id": OAUTH_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": OAUTH_SCOPE,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+    return redirect(f"{OAUTH_AUTHORIZE_URL}?{urlencode(params)}", code=302)
+
+
+@app.route("/callback")
+def pricer_oauth_callback():
+    config_error = _validate_oauth_config()
+    if config_error:
+        return redirect(f"/pricer?oauth=error&message={config_error}", code=302)
+
+    if request.args.get("error"):
+        err = request.args.get("error_description") or request.args.get("error")
+        return redirect(f"/pricer?oauth=error&message={quote_plus(err)}", code=302)
+
+    state = (request.args.get("state") or "").strip()
+    code = (request.args.get("code") or "").strip()
+    if not state or not code:
+        return redirect("/pricer?oauth=error&message=missing+state+or+code", code=302)
+
+    session_state = str(session.get("oauth_state") or "")
+    session_verifier = str(session.get("oauth_code_verifier") or "")
+    state_created = float(session.get("oauth_state_created_at") or 0)
+
+    verifier = None
+    if session_state == state and session_verifier and (time.time() - state_created <= OAUTH_STATE_TTL_SECONDS):
+        verifier = session_verifier
+    else:
+        verifier = _pop_pkce_verifier(state)
+
+    session.pop("oauth_state", None)
+    session.pop("oauth_code_verifier", None)
+    session.pop("oauth_state_created_at", None)
+
+    if not verifier:
+        return redirect("/pricer?oauth=error&message=invalid+or+expired+state", code=302)
+
+    redirect_uri = _resolve_oauth_redirect_uri()
+
+    try:
+        token_resp = requests.post(
+            OAUTH_TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "client_id": OAUTH_CLIENT_ID,
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "code_verifier": verifier,
+            },
+            timeout=12,
+            headers={"Accept": "application/json"},
+        )
+        if token_resp.status_code >= 400:
+            return redirect(
+                f"/pricer?oauth=error&message=token+exchange+failed+{token_resp.status_code}",
+                code=302,
+            )
+        payload = token_resp.json()
+        if not payload.get("access_token"):
+            return redirect("/pricer?oauth=error&message=token+missing", code=302)
+        _save_tokens(payload)
+
+        sync_data = _sync_stash_with_token(payload["access_token"], game="poe2", league=CURRENT_LEAGUE_NAME)
+        tabs_count = len(sync_data.get("tabs") or [])
+        return redirect(f"/pricer?oauth=ok&tabs={tabs_count}", code=302)
+    except Exception as exc:
+        return redirect(f"/pricer?oauth=error&message={quote_plus(str(exc))}", code=302)
+
+
+@app.route("/api/pricer/stash/state")
+def pricer_stash_state():
+    state = _read_stash_state()
+    tokens = _load_tokens()
+    config_error = _validate_oauth_config()
+
+    config_message = ""
+    if config_error == "missing+POE_TW_CLIENT_ID":
+        config_message = "請先設定 POE_TW_CLIENT_ID。"
+    elif config_error == "invalid+POE_TW_REDIRECT_URI":
+        config_message = "POE_TW_REDIRECT_URI 格式不正確。"
+    elif config_error == "client_redirect_mismatch+poetwpricer":
+        config_message = "目前使用的 client_id=poetwpricer 僅允許 https://www.poepricer.com/callback，無法用本機 callback。"
+
+    return {
+        "status": "ok",
+        "oauth_connected": bool(tokens and tokens.get("access_token")),
+        "oauth_configured": config_error is None,
+        "oauth_config_error": config_error,
+        "oauth_config_message": config_message,
+        "stash": state,
+    }
+
+
+@app.route("/api/pricer/stash/sync", methods=["POST"])
+def pricer_stash_sync():
+    payload = request.get_json(silent=True) or {}
+    game = str(payload.get("game") or "poe2").strip().lower()
+    league = str(payload.get("league") or CURRENT_LEAGUE_NAME).strip()
+    if game not in ("poe1", "poe2"):
+        return {"status": "error", "message": "無效的 game 參數"}, 400
+    if league and not re.match(r"^[A-Za-z0-9 _\-]{1,60}$", league):
+        return {"status": "error", "message": "無效的聯盟名稱"}, 400
+
+    access_token = _get_valid_access_token()
+    if not access_token:
+        return {"status": "error", "message": "尚未授權，請先登入。"}, 401
+
+    try:
+        stash_state = _sync_stash_with_token(access_token, game=game, league=league)
+        return {"status": "ok", "stash": stash_state}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}, 502
+
+
+@app.route("/api/pricer/stash/resources")
+def pricer_stash_resources():
+    refresh = (request.args.get("refresh") or "").strip().lower() in ("1", "true", "yes")
+    stash_state = _read_stash_state()
+
+    if refresh:
+        access_token = _get_valid_access_token()
+        if not access_token:
+            return {"status": "error", "message": "尚未授權，請先登入。"}, 401
+        game = str(request.args.get("game") or (stash_state or {}).get("game") or "poe2").lower()
+        league = str(request.args.get("league") or (stash_state or {}).get("league") or CURRENT_LEAGUE_NAME)
+        stash_state = _sync_stash_with_token(access_token, game=game, league=league)
+
+    raw_payload = _read_stash_raw_payload()
+    if not raw_payload:
+        return {"status": "error", "message": "尚無倉庫資料，請先完成授權並同步。"}, 404
+
+    stats = _build_stash_resource_stats(raw_payload)
+    return {
+        "status": "ok",
+        "account_name": (stash_state or {}).get("account_name", ""),
+        "game": (stash_state or {}).get("game", ""),
+        "league": (stash_state or {}).get("league", ""),
+        "updated_at": (stash_state or {}).get("updated_at", 0),
+        **stats,
     }
 
 
