@@ -1,0 +1,140 @@
+{
+  "poe2": {
+    "shop_defaults": [
+      "\"bow|mov|[egdl] da.* to a\""
+    ],
+    "shop_groups": [
+      {
+        "title": "🏹 冰霜射擊商店正則 (EN)",
+        "keywords": [
+          {
+            "label": "Vendor Regex (Guide)",
+            "kw": "\"bow|mov|[egdl] da.* to a\""
+          },
+          {
+            "label": "Bow",
+            "kw": "bow"
+          },
+          {
+            "label": "Quiver",
+            "kw": "quiver"
+          },
+          {
+            "label": "Movement Speed",
+            "kw": "movement speed"
+          }
+        ]
+      },
+      {
+        "title": "⚔️ 攻擊核心 (EN)",
+        "keywords": [
+          {
+            "label": "Attack Speed",
+            "kw": "attack speed"
+          },
+          {
+            "label": "Adds # to # Damage",
+            "kw": "adds"
+          },
+          {
+            "label": "Physical Damage %",
+            "kw": "increased physical damage"
+          },
+          {
+            "label": "Critical Strike Chance",
+            "kw": "critical strike chance"
+          },
+          {
+            "label": "Critical Strike Multiplier",
+            "kw": "critical strike multiplier"
+          }
+        ]
+      },
+      {
+        "title": "❄️ 投射/元素 (EN)",
+        "keywords": [
+          {
+            "label": "+ Projectile Skills",
+            "kw": "projectile skills"
+          },
+          {
+            "label": "Cold Damage",
+            "kw": "cold damage"
+          },
+          {
+            "label": "Elemental Damage with Attacks",
+            "kw": "elemental damage with attack"
+          },
+          {
+            "label": "Lightning Resistance",
+            "kw": "lightning resistance"
+          },
+          {
+            "label": "Cold Resistance",
+            "kw": "cold resistance"
+          }
+        ]
+      },
+      {
+        "title": "🛡️ 生存 (EN)",
+        "keywords": [
+          {
+            "label": "Maximum Life",
+            "kw": "maximum life"
+          },
+          {
+            "label": "Evasion",
+            "kw": "evasion"
+          },
+          {
+            "label": "Armour",
+            "kw": "armour"
+          },
+          {
+            "label": "All Elemental Resistances",
+            "kw": "all elemental resistances"
+          }
+        ]
+      }
+    ],
+    "waystone_defaults": [
+      "物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})",
+      "怪物效能.*([3-9][0-9]|[1-9][0-9]{2})",
+      "換界石抹落.*([1-9][0-9])"
+    ],
+    "waystone_keywords": [
+      {
+        "label": "稀有度 >=40%",
+        "kw": "物品稀有度.*([4-9][0-9]|[1-9][0-9]{2})"
+      },
+      {
+        "label": "稀有度 >=80%",
+        "kw": "物品稀有度.*([8-9][0-9]|[1-9][0-9]{2})"
+      },
+      {
+        "label": "怪物效能 >=30%",
+        "kw": "怪物效能.*([3-9][0-9]|[1-9][0-9]{2})"
+      },
+      {
+        "label": "換界石抹落 >=10%",
+        "kw": "換界石抹落.*([1-9][0-9])"
+      },
+      {
+        "label": "物品數量",
+        "kw": "物品數量"
+      },
+      {
+        "label": "T14",
+        "kw": "階級 14"
+      },
+      {
+        "label": "T15",
+        "kw": "階級 15"
+      },
+      {
+        "label": "T16",
+        "kw": "階級 16"
+      }
+    ]
+  }
+}
