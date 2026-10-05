@@ -11,11 +11,9 @@
       --text: #e2e8f0;
       --muted: #94a3b8;
       --shadow: 0 24px 80px rgba(0,0,0,0.5);
-      /* POE1 amber */
       --p1: #f59e0b;
       --p1-dim: rgba(245,158,11,0.12);
       --p1-border: rgba(245,158,11,0.3);
-      /* POE2 crystal purple */
       --p2: #a78bfa;
       --p2-dim: rgba(167,139,250,0.12);
       --p2-border: rgba(167,139,250,0.3);
@@ -42,7 +40,6 @@
       box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.03);
       backdrop-filter: blur(20px);
     }
-    /* ── HERO ─────────────────────────────── */
     .hero {
       position: relative;
       padding: 0;
@@ -196,7 +193,7 @@
       background: var(--p2-dim);
       border-color: var(--p2-border);
     }
-    .cat-icon { font-size: 18px; flex-shrink: 0; }
+    .cat-icon { font-size: 24px; line-height: 1; flex-shrink: 0; }
     .category-label-row {
       flex: 1;
       display: flex;
@@ -214,6 +211,33 @@
       color: var(--muted);
       font-size: 11px;
     }
+    .price-nav-group { margin: 2px 0 6px; }
+    .price-nav-toggle {
+      width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1px solid transparent; border-radius: 12px; color: var(--text);
+      background: transparent; text-align: left; font: inherit; cursor: pointer;
+    }
+    .price-nav-toggle:hover { background: rgba(255,255,255,0.04); }
+    .price-nav-toggle.poe1-price { color: #fcd34d; }
+    .price-nav-toggle.poe2-price { color: #c4b5fd; }
+    .price-nav-chevron { width: 14px; color: var(--muted); transition: transform .16s ease; }
+    .price-nav-toggle[aria-expanded="true"] .price-nav-chevron { transform: rotate(90deg); }
+    .price-nav-children { display: grid; gap: 2px; margin-left: 12px; padding-left: 10px; border-left: 1px solid var(--line); }
+    .price-nav-children[hidden] { display: none; }
+    .price-nav-children .category-button { padding: 8px 10px; }
+    .price-kind-toggle { position: relative; }
+    .price-kind-chevron { color: var(--muted); font-size: 11px; transition: transform .16s ease; }
+    .price-kind-toggle[aria-expanded="true"] .price-kind-chevron { transform: rotate(90deg); }
+    .price-category-list { display: grid; gap: 2px; margin: 0 0 4px 22px; padding: 2px 0 4px 9px; border-left: 1px solid rgba(148,163,184,.15); }
+    .price-category-list[hidden] { display: none; }
+    .price-category-leaf { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 5px 8px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; text-align: left; font-size: 12px; cursor: pointer; }
+    .price-category-leaf:hover { color: var(--text); background: rgba(255,255,255,.04); }
+    .price-category-leaf.active { color: var(--text); background: rgba(148,163,184,.1); border-color: var(--line); }
+    .price-category-count { flex: 0 0 auto; color: var(--muted); font-size: 10px; }
+    .price-category-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .price-category-icon { width: 28px; height: 28px; flex: 0 0 28px; object-fit: contain; }
+    .price-category-icon-blank { width: 28px; height: 28px; flex: 0 0 28px; }
+    .price-kind-source-icon { width: 30px; height: 30px; flex: 0 0 30px; object-fit: contain; }
     /* ── LIST PANEL ─────────────────────────── */
     .list-panel {
       padding: 20px 16px;
@@ -295,6 +319,32 @@
     }
     h1, h2, h3 { color: #f8fafc; }
     .doc-panel h1 { font-size: 30px; margin-top: 0; }
+      .layout.direct-view { grid-template-columns: 260px minmax(0, 1fr); }
+      .layout.direct-view .list-panel { display: none; }
+      .tw-currency-panel h1 { margin: 0 0 8px; }
+      .tw-currency-panel .currency-intro { color: var(--muted); margin: 0 0 18px; }
+      .tw-currency-controls { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 10px; margin: 16px 0 12px; }
+      .tw-currency-controls input, .tw-currency-controls select { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: rgba(2,6,16,.6); }
+      .tw-currency-controls button { padding: 8px 13px; border: 1px solid rgba(245,158,11,.4); border-radius: 8px; color: #fcd34d; background: rgba(245,158,11,.1); cursor: pointer; }
+      .tw-currency-status { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; color: var(--muted); font-size: 12px; }
+      .tw-currency-error { color: #fca5a5; }
+      .tw-currency-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+      .tw-currency-table { width: 100%; min-width: 560px; border-collapse: collapse; }
+      .tw-currency-table th, .tw-currency-table td { padding: 9px 10px; border-bottom: 1px solid rgba(148,163,184,.12); text-align: left; font-size: 12px; }
+      .tw-currency-table th { color: var(--muted); font-size: 11px; white-space: nowrap; }
+      .tw-currency-item { display: flex; align-items: center; gap: 8px; min-width: 175px; }
+      .tw-currency-icon { width: 28px; height: 28px; object-fit: contain; }
+      .tw-currency-code { display: block; color: var(--muted); font-size: 10px; }
+      .tw-currency-price { color: #fcd34d; white-space: nowrap; }
+      .tw-price-ratio { display: flex; align-items: center; gap: 5px; min-height: 30px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .tw-price-icon { width: 24px; height: 24px; flex: 0 0 24px; object-fit: contain; }
+      .tw-price-arrow { color: var(--muted); }
+      .tw-price-empty { color: var(--muted); }
+      .tw-trade-link { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid rgba(167,139,250,.28); border-radius: 7px; color: #c4b5fd; white-space: nowrap; font-size: 11px; }
+      .tw-trade-link:hover { color: #fff; border-color: rgba(167,139,250,.65); background: rgba(167,139,250,.1); }
+      .tw-currency-up { color: #86efac; }
+      .tw-currency-down { color: #fca5a5; }
+      .tw-currency-note { margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.7; }
     .doc-panel h2 {
       margin-top: 32px;
       padding-bottom: 8px;
@@ -386,6 +436,7 @@
     }
     @media (max-width: 960px) {
       .layout { grid-template-columns: 1fr; }
+      .layout.direct-view { grid-template-columns: 1fr; }
       .sidebar, .list-panel, .viewer {
         position: static;
         height: auto;
@@ -543,6 +594,17 @@
     .p1-copy-btn { background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:#fbbf24; }
     .p1-copy-btn:hover { background:rgba(245,158,11,0.28); }
     .kw-group-title-p1 { font-size:13px; font-weight:700; color:#fbbf24; margin-bottom:10px; letter-spacing:.04em; }
+    .strategy-dialog { width:min(420px,calc(100% - 32px)); padding:24px; border:1px solid rgba(167,139,250,.4); border-radius:14px; color:var(--text); background:#101b2b; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+    .strategy-dialog::backdrop { background:rgba(2,6,16,.76); backdrop-filter:blur(4px); }
+    .strategy-dialog h2 { margin:0 0 8px; font-size:20px; }
+    .strategy-dialog p { margin:0 0 16px; color:var(--muted); font-size:13px; line-height:1.6; }
+    .strategy-dialog form { display:grid; gap:12px; }
+    .strategy-dialog input { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px; color:var(--text); background:#07111f; }
+    .strategy-dialog-actions { display:flex; justify-content:flex-end; gap:8px; }
+    .strategy-dialog button { padding:9px 14px; border:1px solid var(--line); border-radius:8px; color:var(--text); background:rgba(148,163,184,.08); cursor:pointer; }
+    .strategy-dialog button[type="submit"] { border-color:rgba(167,139,250,.5); color:#ede9fe; background:rgba(167,139,250,.2); }
+    .strategy-error { min-height:18px; color:#fca5a5 !important; }
+    .strategy-lock-action { margin:0 0 14px; padding:7px 11px; border:1px solid var(--line); border-radius:8px; color:var(--muted); background:transparent; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -575,11 +637,11 @@
               {{ game.label }}
             </div>
             {% for category in game.categories %}
-            <button class="category-button {{ game.id }}-cat{% if loop.first and game == games[0] %} active{% endif %}" type="button" data-category-target="{{ category.id }}" data-game="{{ game.id }}">
+            <button class="category-button {{ game.id }}-cat{% if loop.first and game == games[0] %} active{% endif %}" type="button" data-category-target="{{ category.id }}" data-game="{{ game.id }}" {% if category.locked %}data-category-locked="true"{% endif %}>
               <span class="cat-icon">{{ cat_icons.get(category.name, '📌') }}</span>
               <span class="category-label-row">
                 <span class="category-name">{{ category.label }}</span>
-                <span class="category-count">{{ category.count }}</span>
+                <span class="category-count">{% if category.locked %}🔒{% else %}{{ category.count }}{% endif %}</span>
               </span>
             </button>
             {% endfor %}
@@ -598,38 +660,50 @@
                 <span class="category-name">拓荒篩選</span>
               </span>
             </button>
-            <button class="category-button poe2-cat" type="button" data-category-target="poe2-trade">
-              <span class="cat-icon">💎</span>
-              <span class="category-label-row">
-                <span class="category-name">快速交易</span>
-              </span>
-            </button>
-            <a class="category-button poe2-cat" href="/monitor" style="text-decoration:none">
-              <span class="cat-icon">🦅</span>
-              <span class="category-label-row">
-                <span class="category-name">開季監控</span>
-              </span>
-            </a>
-            <a class="category-button poe2-cat" href="/pricer" style="text-decoration:none">
-              <span class="cat-icon">💱</span>
-              <span class="category-label-row">
-                <span class="category-name">通貨查價</span>
-              </span>
-            </a>
+            <div class="price-nav-group" data-price-nav-group="poe2">
+              <button class="price-nav-toggle poe2-price" type="button" data-price-nav-toggle="poe2" aria-expanded="true" aria-controls="poe2-price-children">
+                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-nav-icon="poe2" alt="" loading="lazy"><span class="category-name">物價</span>
+              </button>
+              <div class="price-nav-children" id="poe2-price-children" data-price-nav-children="poe2">
+                <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-currency" data-game="poe2" data-price-kind="currency" aria-expanded="false" aria-controls="poe2-currency-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-currency" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">通貨</span></span>
+                </button>
+                <div class="price-category-list" id="poe2-currency-categories" data-price-category-list="poe2-currency" hidden></div>
+                <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-unique" data-game="poe2" data-price-kind="unique" aria-expanded="false" aria-controls="poe2-unique-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-unique" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">傳奇</span></span>
+                </button>
+                <div class="price-category-list" id="poe2-unique-categories" data-price-category-list="poe2-unique" hidden></div>
+                <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-gem" data-game="poe2" data-price-kind="gem" aria-expanded="false" aria-controls="poe2-gem-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-gem" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">寶石</span></span>
+                </button>
+                <div class="price-category-list" id="poe2-gem-categories" data-price-category-list="poe2-gem" hidden></div>
+              </div>
+            </div>
             {% endif %}
             {% if game.id == 'poe1' %}
-            <button class="category-button poe1-cat" type="button" data-category-target="poe1-trade">
-              <span class="cat-icon">💰</span>
-              <span class="category-label-row">
-                <span class="category-name">快速交易</span>
-              </span>
-            </button>
-            <a class="category-button poe1-cat" href="/pricer?game=poe1" style="text-decoration:none">
-              <span class="cat-icon">💱</span>
-              <span class="category-label-row">
-                <span class="category-name">通貨查價</span>
-              </span>
-            </a>
+            <div class="price-nav-group" data-price-nav-group="poe1">
+              <button class="price-nav-toggle poe1-price" type="button" data-price-nav-toggle="poe1" aria-expanded="true" aria-controls="poe1-price-children">
+                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-nav-icon="poe1" alt="" loading="lazy"><span class="category-name">物價</span>
+              </button>
+              <div class="price-nav-children" id="poe1-price-children" data-price-nav-children="poe1">
+                <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-currency" data-game="poe1" data-price-kind="currency" aria-expanded="false" aria-controls="poe1-currency-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-currency" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">通貨</span></span>
+                </button>
+                <div class="price-category-list" id="poe1-currency-categories" data-price-category-list="poe1-currency" hidden></div>
+                <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-unique" data-game="poe1" data-price-kind="unique" aria-expanded="false" aria-controls="poe1-unique-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-unique" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">傳奇</span></span>
+                </button>
+                <div class="price-category-list" id="poe1-unique-categories" data-price-category-list="poe1-unique" hidden></div>
+                <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-gem" data-game="poe1" data-price-kind="gem" aria-expanded="false" aria-controls="poe1-gem-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-gem" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">寶石</span></span>
+                </button>
+                <div class="price-category-list" id="poe1-gem-categories" data-price-category-list="poe1-gem" hidden></div>
+                <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-beast" data-game="poe1" data-price-kind="beast" aria-expanded="false" aria-controls="poe1-beast-categories">
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-beast" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">野獸</span></span>
+                </button>
+                <div class="price-category-list" id="poe1-beast-categories" data-price-category-list="poe1-beast" hidden></div>
+              </div>
+            </div>
             {% endif %}
           </div>
           {% endfor %}
@@ -646,6 +720,12 @@
             <div class="category-panel{% if ns.first %} active{% endif %}" data-category-panel="{{ category.id }}" {% if not ns.first %}style="display:none"{% endif %}>
               <h2 class="list-heading">{{ category.label }}</h2>
               <p class="list-subheading">{{ game.label }} &middot; {{ category.count }} 份文件</p>
+              {% if category.locked %}
+              <div class="empty">策略文章已加密，輸入密碼後即可瀏覽。</div>
+              <button class="strategy-lock-action" type="button" data-unlock-strategy="{{ category.id }}">輸入密碼解鎖</button>
+              {% elif category.name == 'strategy' and strategy_unlocked %}
+              <button class="strategy-lock-action" type="button" data-lock-strategy>鎖定策略文章</button>
+              {% endif %}
               <div class="card-list">
                 {% for doc in category.documents %}
                 <button class="doc-card {{ game.id }}-card" type="button" data-doc-target="{{ doc.id }}" data-doc-category="{{ category.id }}">
@@ -690,114 +770,6 @@
               </button>
             </div>
           </div>
-          <!-- POE2 快速交易 -->
-          <div class="category-panel" data-category-panel="poe2-trade" style="display:none">
-            <h2 class="list-heading">💎 快速交易</h2>
-            <p class="list-subheading">Path of Exile 2 &middot; {{ trade_links.poe2|length }} 個常用交易搜尋</p>
-            <div style="padding:20px;">
-              {% for item in trade_links.poe2 %}
-              <div style="display:flex;align-items:center;padding:16px;margin-bottom:12px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:4px solid #3498db;">
-                <!-- 物品圖片 -->
-                {% if item.icon %}
-                <img src="{{ item.icon }}" alt="{{ item.name }}" style="width:64px;height:64px;object-fit:contain;margin-right:16px;flex-shrink:0;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;" onerror="this.style.display='none'">
-                {% endif %}
-                
-                <!-- 物品資訊 -->
-                <div style="flex:1;min-width:0;">
-                  <h3 style="margin:0 0 8px 0;font-size:18px;color:#fff;">{{ item.name }}</h3>
-                  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>類別：</strong>{{ item.category }}
-                    </span>
-                    {% if item.rarity %}
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>稀有度：</strong>{{ item.rarity }}
-                    </span>
-                    {% endif %}
-                    {% if item.item_level %}
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>物品等級：</strong>{{ item.item_level }}
-                    </span>
-                    {% endif %}
-                  </div>
-                  {% if item.filters %}
-                  <div style="font-size:12px;color:#7f8c8d;margin-top:4px;">
-                    <strong>篩選：</strong>{{ item.filters }}
-                  </div>
-                  {% endif %}
-                  {% if item.price_chaos or item.price_exalted %}
-                  <div style="font-weight:bold;color:#f39c12;margin-top:8px;font-size:16px;">
-                    {% if item.price_chaos %}💰 約 {{ item.price_chaos }}{% endif %}
-                    {% if item.price_exalted %} / {{ item.price_exalted }} Ex{% endif %}
-                  </div>
-                  {% endif %}
-                </div>
-                
-                <!-- 查詢按鈕 -->
-                <a href="{{ item.url }}" target="_blank" style="padding:12px 24px;background:#3498db;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin-left:16px;white-space:nowrap;transition:background 0.2s;" onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">
-                  🔍 查詢
-                </a>
-              </div>
-              {% endfor %}
-              {% if not trade_links.poe2 %}
-              <div style="text-align:center;padding:40px;color:#7f8c8d;">尚未新增任何交易搜尋</div>
-              {% endif %}
-            </div>
-          </div>
-          <!-- POE1 快速交易 -->
-          <div class="category-panel" data-category-panel="poe1-trade" style="display:none">
-            <h2 class="list-heading">💰 快速交易</h2>
-            <p class="list-subheading">Path of Exile 1 &middot; {{ trade_links.poe1|length }} 個常用交易搜尋</p>
-            <div style="padding:20px;">
-              {% for item in trade_links.poe1 %}
-              <div style="display:flex;align-items:center;padding:16px;margin-bottom:12px;background:rgba(255,255,255,0.05);border-radius:8px;border-left:4px solid #e74c3c;">
-                <!-- 物品圖片 -->
-                {% if item.icon %}
-                <img src="{{ item.icon }}" alt="{{ item.name }}" style="width:64px;height:64px;object-fit:contain;margin-right:16px;flex-shrink:0;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;" onerror="this.style.display='none'">
-                {% endif %}
-                
-                <!-- 物品資訊 -->
-                <div style="flex:1;min-width:0;">
-                  <h3 style="margin:0 0 8px 0;font-size:18px;color:#fff;">{{ item.name }}</h3>
-                  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>類別：</strong>{{ item.category }}
-                    </span>
-                    {% if item.rarity %}
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>稀有度：</strong>{{ item.rarity }}
-                    </span>
-                    {% endif %}
-                    {% if item.item_level %}
-                    <span style="font-size:13px;color:#95a5a6;">
-                      <strong>物品等級：</strong>{{ item.item_level }}
-                    </span>
-                    {% endif %}
-                  </div>
-                  {% if item.filters %}
-                  <div style="font-size:12px;color:#7f8c8d;margin-top:4px;">
-                    <strong>篩選：</strong>{{ item.filters }}
-                  </div>
-                  {% endif %}
-                  {% if item.price_chaos or item.price_exalted %}
-                  <div style="font-weight:bold;color:#f39c12;margin-top:8px;font-size:16px;">
-                    {% if item.price_chaos %}💰 約 {{ item.price_chaos }}{% endif %}
-                    {% if item.price_exalted %} / {{ item.price_exalted }} Ex{% endif %}
-                  </div>
-                  {% endif %}
-                </div>
-                
-                <!-- 查詢按鈕 -->
-                <a href="{{ item.url }}" target="_blank" style="padding:12px 24px;background:#e74c3c;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin-left:16px;white-space:nowrap;transition:background 0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
-                  🔍 查詢
-                </a>
-              </div>
-              {% endfor %}
-              {% if not trade_links.poe1 %}
-              <div style="text-align:center;padding:40px;color:#7f8c8d;">尚未新增任何交易搜尋</div>
-              {% endif %}
-            </div>
-          </div>
         {% endif %}
       </section>
 
@@ -815,6 +787,100 @@
               </article>
               {% endfor %}
             {% endfor %}
+          {% endfor %}
+          {% for game_id, game_label in [('poe1', 'Path of Exile 1'), ('poe2', 'Path of Exile 2')] %}
+          <article class="doc-panel tw-currency-panel" data-direct-category="{{ game_id }}-tw-currency" data-game="{{ game_id }}" data-kind="currency">
+            <div class="meta {{ game_id }}-meta">{% if game_id == 'poe1' %}🔥{% else %}❄️{% endif %} {{ game_label }} / 台服通貨物價</div>
+            <h1>台服通貨物價</h1>
+            <p class="currency-intro">依官方交易所掛單統計，查看台服最新通貨行情。</p>
+            <div class="tw-currency-controls">
+              <input type="search" data-currency-search placeholder="搜尋通貨名稱" aria-label="搜尋通貨名稱">
+              <select data-currency-sort aria-label="排序方式">
+                <option value="price">價格高 → 低</option>
+                <option value="change">近期漲幅</option>
+                <option value="name">名稱</option>
+              </select>
+              <button type="button" data-currency-refresh>↻ 重新讀取</button>
+            </div>
+            <div class="tw-currency-status" aria-live="polite">
+              <span>聯盟：<strong data-currency-league>載入中</strong></span>
+              <span>通貨：<strong data-currency-count>-</strong></span>
+              <span>更新：<strong data-currency-updated>-</strong></span>
+              <span class="tw-currency-error" data-currency-error role="status"></span>
+            </div>
+            <div class="tw-currency-table-wrap">
+              <table class="tw-currency-table">
+                <thead><tr><th>通貨</th><th>兌換比</th><th>台服查價</th><th>近期變化</th><th>信心分數</th></tr></thead>
+                <tbody data-currency-rows><tr><td colspan="5">選擇左側台服通貨物價以載入行情。</td></tr></tbody>
+              </table>
+            </div>
+            <p class="tw-currency-note">資料來源：POE Pricer TW，官方交易所掛單統計，每小時更新。掛單比率為市場參考價，非實際成交紀錄；本服務與 Grinding Gear Games 無隸屬關係。</p>
+          </article>
+          <article class="doc-panel tw-currency-panel" data-direct-category="{{ game_id }}-tw-unique" data-game="{{ game_id }}" data-kind="unique">
+            <div class="meta {{ game_id }}-meta">{% if game_id == 'poe1' %}🔥{% else %}❄️{% endif %} {{ game_label }} / 台服傳奇物價</div>
+            <h1>傳奇物價</h1>
+            <p class="currency-intro">依台服官方交易所掛單整理，可依裝備部位篩選。</p>
+            <div class="tw-currency-controls">
+              <input type="search" data-currency-search placeholder="搜尋傳奇名稱" aria-label="搜尋傳奇名稱">
+              <select data-currency-sort aria-label="排序方式">
+                <option value="price">價格高 → 低</option>
+                <option value="listings">掛單數多 → 少</option>
+                <option value="name">名稱</option>
+              </select>
+              <button type="button" data-currency-refresh>↻ 重新讀取</button>
+            </div>
+            <div class="tw-currency-status" aria-live="polite">
+              <span>聯盟：<strong data-currency-league>載入中</strong></span>
+              <span>傳奇：<strong data-currency-count>-</strong></span>
+              <span>更新：<strong data-currency-updated>-</strong></span>
+              <span class="tw-currency-error" data-currency-error role="status"></span>
+            </div>
+            <div class="tw-currency-table-wrap">
+              <table class="tw-currency-table">
+                <thead><tr><th>傳奇</th><th>分類</th><th>兌換比</th><th>台服查價</th><th>掛單數</th><th>信心</th></tr></thead>
+                <tbody data-currency-rows><tr><td colspan="6">選擇左側「物價 → 傳奇」以載入行情。</td></tr></tbody>
+              </table>
+            </div>
+            <p class="tw-currency-note">資料來源：POE Pricer TW，官方交易所掛單統計。價格為掛單參考，不代表成交；本服務與 Grinding Gear Games 無隸屬關係。</p>
+          </article>
+          <article class="doc-panel tw-currency-panel" data-direct-category="{{ game_id }}-tw-gem" data-game="{{ game_id }}" data-kind="gem">
+            <div class="meta {{ game_id }}-meta">{% if game_id == 'poe1' %}🔥{% else %}❄️{% endif %} {{ game_label }} / 台服寶石物價</div>
+            <h1>寶石物價</h1>
+            <p class="currency-intro">依來源分類顯示技能、輔助與特殊寶石價格。</p>
+            <div class="tw-currency-controls">
+              <input type="search" data-currency-search placeholder="搜尋寶石名稱" aria-label="搜尋寶石名稱">
+              <select data-currency-sort aria-label="排序方式"><option value="price">價格高 → 低</option><option value="listings">掛單數多 → 少</option><option value="name">名稱</option></select>
+              <button type="button" data-currency-refresh>↻ 重新讀取</button>
+            </div>
+            <div class="tw-currency-status" aria-live="polite">
+              <span>聯盟：<strong data-currency-league>載入中</strong></span><span>寶石：<strong data-currency-count>-</strong></span><span>更新：<strong data-currency-updated>-</strong></span><span class="tw-currency-error" data-currency-error role="status"></span>
+            </div>
+            <div class="tw-currency-table-wrap"><table class="tw-currency-table">
+              <thead><tr><th>寶石</th><th>分類</th><th>兌換比</th><th>台服查價</th><th>掛單數</th><th>信心</th></tr></thead>
+              <tbody data-currency-rows><tr><td colspan="6">選擇左側「物價 → 寶石」以載入行情。</td></tr></tbody>
+            </table></div>
+            <p class="tw-currency-note">資料來源：POE Pricer TW 官方交易所掛單統計。連結會另開 Path of Exile 台服交易搜尋。</p>
+          </article>
+          {% if game_id == 'poe1' %}
+          <article class="doc-panel tw-currency-panel" data-direct-category="poe1-tw-beast" data-game="poe1" data-kind="beast">
+            <div class="meta poe1-meta">🔥 Path of Exile 1 / 台服野獸物價</div>
+            <h1>野獸物價</h1>
+            <p class="currency-intro">依野獸顏色分類，價格以混沌石或神聖石表示。</p>
+            <div class="tw-currency-controls">
+              <input type="search" data-currency-search placeholder="搜尋野獸名稱" aria-label="搜尋野獸名稱">
+              <select data-currency-sort aria-label="排序方式"><option value="price">價格高 → 低</option><option value="listings">掛單帳號多 → 少</option><option value="name">名稱</option></select>
+              <button type="button" data-currency-refresh>↻ 重新讀取</button>
+            </div>
+            <div class="tw-currency-status" aria-live="polite">
+              <span>聯盟：<strong data-currency-league>載入中</strong></span><span>野獸：<strong data-currency-count>-</strong></span><span>更新：<strong data-currency-updated>-</strong></span><span class="tw-currency-error" data-currency-error role="status"></span>
+            </div>
+            <div class="tw-currency-table-wrap"><table class="tw-currency-table">
+              <thead><tr><th>野獸</th><th>分類</th><th>兌換比</th><th>台服查價</th><th>帳號數</th><th>狀態</th></tr></thead>
+              <tbody data-currency-rows><tr><td colspan="6">選擇左側「物價 → 野獸」以載入行情。</td></tr></tbody>
+            </table></div>
+            <p class="tw-currency-note">資料來源：POE Pricer TW。查價連結另開官方台服交易搜尋。</p>
+          </article>
+          {% endif %}
           {% endfor %}
           <!-- PoE1 裝備篩選工具 -->
           <article class="doc-panel" data-doc-panel="poe1-shop-filter">
@@ -941,6 +1007,19 @@
     </div>
   </div>
 
+  <dialog class="strategy-dialog" id="strategyDialog" aria-labelledby="strategyDialogTitle">
+    <form id="strategyUnlockForm">
+      <h2 id="strategyDialogTitle">解鎖策略文章</h2>
+      <p id="strategyDialogDescription">輸入策略密碼以瀏覽受保護的文章。</p>
+      <input id="strategyPassword" type="password" name="password" autocomplete="current-password" placeholder="策略密碼" required>
+      <p class="strategy-error" id="strategyError" role="alert"></p>
+      <div class="strategy-dialog-actions">
+        <button type="button" id="strategyCancel">取消</button>
+        <button type="submit" id="strategySubmit">解鎖</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
@@ -984,6 +1063,66 @@
     const categoryPanels = document.querySelectorAll('.category-panel');
     const docButtons = document.querySelectorAll('.doc-card');
     const docPanels = document.querySelectorAll('.doc-panel');
+    const strategyDialog = document.getElementById('strategyDialog');
+    const strategyUnlockForm = document.getElementById('strategyUnlockForm');
+    const strategyPassword = document.getElementById('strategyPassword');
+    const strategyError = document.getElementById('strategyError');
+    const strategySubmit = document.getElementById('strategySubmit');
+    let pendingStrategyCategory = '';
+
+    function openStrategyUnlock(categoryId) {
+      pendingStrategyCategory = categoryId;
+      strategyError.textContent = '';
+      strategyPassword.value = '';
+      const passwordConfigured = {{ strategy_password_configured|tojson }};
+      document.getElementById('strategyDialogDescription').textContent = passwordConfigured
+        ? '輸入策略密碼以瀏覽受保護的文章。'
+        : '管理者尚未設定策略密碼，請稍後再試。';
+      strategyPassword.hidden = !passwordConfigured;
+      strategySubmit.hidden = !passwordConfigured;
+      strategyPassword.required = passwordConfigured;
+      strategyDialog.showModal();
+      if (passwordConfigured) strategyPassword.focus();
+    }
+
+    document.getElementById('strategyCancel').addEventListener('click', () => strategyDialog.close());
+    strategyDialog.addEventListener('click', (event) => {
+      if (event.target === strategyDialog) strategyDialog.close();
+    });
+    strategyUnlockForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      strategySubmit.disabled = true;
+      strategyError.textContent = '';
+      try {
+        const response = await fetch('/api/strategy/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: strategyPassword.value }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || '解鎖失敗');
+        localStorage.setItem('poe-active-category', pendingStrategyCategory);
+        localStorage.removeItem('poe-active-doc');
+        window.location.reload();
+      } catch (error) {
+        strategyError.textContent = error.message || '解鎖失敗，請稍後再試。';
+      } finally {
+        strategySubmit.disabled = false;
+      }
+    });
+
+    document.querySelectorAll('[data-unlock-strategy]').forEach((button) => {
+      button.addEventListener('click', () => openStrategyUnlock(button.dataset.unlockStrategy));
+    });
+
+    document.querySelectorAll('[data-lock-strategy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        await fetch('/api/strategy/lock', { method: 'POST' });
+        localStorage.removeItem('poe-active-doc');
+        localStorage.removeItem('poe-active-category');
+        window.location.reload();
+      });
+    });
 
     function activateCategory(categoryId) {
       categoryButtons.forEach((button) => {
@@ -995,15 +1134,25 @@
         panel.classList.toggle('active', panel.dataset.categoryPanel === categoryId);
       });
 
+      const directPanel = document.querySelector(`.doc-panel[data-direct-category="${categoryId}"]`);
+      document.querySelector('.layout').classList.toggle('direct-view', Boolean(directPanel));
+      if (directPanel) setPriceNavExpanded(directPanel.dataset.game, true);
       const firstDoc = document.querySelector(`.doc-card[data-doc-category="${categoryId}"]`);
       if (firstDoc) {
         activateDocument(firstDoc.dataset.docTarget, false);
+      } else if (directPanel) {
+        docButtons.forEach((button) => button.classList.remove('active'));
+        docPanels.forEach((panel) => panel.classList.toggle('active', panel === directPanel));
+        localStorage.setItem('poe-active-category', categoryId);
+        localStorage.removeItem('poe-active-doc');
+        loadTwPricePanel(directPanel);
       }
     }
 
     function activateDocument(docId, ensureCategory = true) {
       const targetButton = document.querySelector(`.doc-card[data-doc-target="${docId}"]`);
       if (!targetButton) return;
+      document.querySelector('.layout').classList.remove('direct-view');
 
       if (ensureCategory) {
         activateCategory(targetButton.dataset.docCategory);
@@ -1026,8 +1175,291 @@
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
+    const twCurrencyUnits = { chaos: '混沌石', divine: '神聖石', exalt: '崇高石', exalted: '崇高石' };
+    const uniqueCategoryFallbacks = { currency: '通貨', heistmission: '劫盜', map: '傳奇地圖', sanctum: '聖所' };
+    const uniqueSubcategoryLabels = { amulet: '護身符', belt: '腰帶', boots: '鞋子', gloves: '手套', helmet: '頭盔', ring: '戒指', shield: '盾牌', quiver: '箭袋', bodyarmour: '胸甲', twohanded: '雙手武器', onehanded: '單手武器' };
+    const priceKindLabels = { currency: '通貨', unique: '傳奇', gem: '寶石', beast: '野獸' };
+    const priceCategoryFallbacks = {
+      gem: { skill: '技能寶石', support: '輔助寶石', transfigured: '變異寶石', exceptional: '卓越寶石' },
+      beast: { red: '紅色野獸', yellow: '黃色野獸' },
+    };
+    function escapeCurrencyText(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    }
+
+    function createTaiwanTradeLink(item, league) {
+      const itemName = item.zhName || item.name || item.enName || item.code || '';
+      if (!itemName || !league) return '<span class="tw-currency-code">無查價連結</span>';
+      const query = {
+        query: {
+          status: { option: 'available' },
+          type: String(itemName).trim(),
+          stats: [{ type: 'and', filters: [] }],
+        },
+        sort: { price: 'asc' },
+      };
+      const url = `https://pathofexile.tw/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`;
+      return `<a class="tw-trade-link" href="${escapeCurrencyText(url)}" target="_blank" rel="noopener noreferrer">查價 ↗</a>`;
+    }
+
+    function renderTwPricePanel(panel) {
+      const kind = panel.dataset.kind;
+      const game = panel.dataset.game;
+      const query = panel.querySelector('[data-currency-search]').value.trim().toLocaleLowerCase();
+      const sortKey = panel.querySelector('[data-currency-sort]').value;
+      const selectedCategory = panel._categoryFilter || '';
+      const items = (panel._priceItems || []).filter((item) => {
+        const searchable = `${item.name || ''} ${item.zhName || ''} ${item.enName || ''} ${item.code || ''} ${item.variantLabel || ''}`;
+        const itemCategory = item.category_id || item.category || item.beastType;
+        return searchable.toLocaleLowerCase().includes(query) && (!selectedCategory || itemCategory === selectedCategory);
+      });
+      const priceForSort = (item) => {
+        if (kind === 'beast') return Number(item.medianChaos || 0);
+        if (kind === 'currency') {
+          return Number(game === 'poe1' ? item.price?.chaosPer1 ?? item.price?.buy : item.price?.divinePer1 ?? 0) || 0;
+        }
+        return Number(item.price?.chaosEquivalent ?? item.medianChaos ?? item.price?.amount ?? 0) || 0;
+      };
+      items.sort((a, b) => sortKey === 'name'
+        ? (a.name || a.zhName || '').localeCompare(b.name || b.zhName || '', 'zh-Hant')
+        : sortKey === 'listings'
+          ? Number(b.listingCount || b.accountCount || 0) - Number(a.listingCount || a.accountCount || 0)
+          : sortKey === 'change'
+            ? Number(b.sparkline?.changePct || 0) - Number(a.sparkline?.changePct || 0)
+            : priceForSort(b) - priceForSort(a));
+
+      const rows = panel.querySelector('[data-currency-rows]');
+      rows.innerHTML = items.length ? items.map((item) => {
+        const isBeast = kind === 'beast';
+        const price = item.price || {};
+        const useDivine = isBeast && Number(item.medianDivine) >= 1;
+        const unitId = isBeast ? (useDivine ? 'divine' : 'chaos') : price.unit;
+        const rawAmount = isBeast ? (useDivine ? item.medianDivine : item.medianChaos) : price.amount ?? price.buy ?? item.medianChaos;
+        const amount = rawAmount == null || !Number.isFinite(Number(rawAmount)) ? null : Number(rawAmount);
+        const unit = twCurrencyUnits[unitId] || unitId || '';
+        const itemName = item.zhName || item.name || item.enName || item.code || '物品';
+        const targetIcon = priceIcon(item.image || item.imageUrl, itemName);
+        const baseIcon = priceIcon(panel._unitIcons?.[unitId], unit);
+        const exchange = amount == null
+          ? '<span class="tw-price-empty">—</span>'
+          : `<div class="tw-price-ratio"><span>${amount.toLocaleString('zh-Hant', { maximumFractionDigits: kind === 'currency' ? 3 : 2 })}</span>${baseIcon}<span class="tw-price-arrow">→</span><span>1</span>${targetIcon}</div>`;
+        const tradeLink = createTaiwanTradeLink(item, panel._priceLeague);
+        const categoryId = item.category_id || item.category || item.beastType || '';
+        const categoryLabel = panel._priceCategories?.find((category) => category.id === categoryId)?.label
+          || uniqueCategoryFallbacks[categoryId]
+          || priceCategoryFallbacks[kind]?.[categoryId]
+          || categoryId
+          || '-';
+        const listingCount = Number(item.listingCount || item.accountCount || 0);
+        const trust = item.confidence || (item.trustScore == null ? '-' : item.trustScore);
+
+        if (kind === 'currency') {
+          const change = item.sparkline?.changePct;
+          const changeValue = Number(change || 0);
+          const changeClass = change == null ? '' : changeValue > 0 ? 'tw-currency-up' : changeValue < 0 ? 'tw-currency-down' : '';
+          const changeText = change == null ? '尚無趨勢' : `${changeValue > 0 ? '+' : ''}${changeValue.toFixed(1)}%`;
+          return `<tr><td><div class="tw-currency-item">${targetIcon}<div>${escapeCurrencyText(itemName)}<span class="tw-currency-code">${escapeCurrencyText(item.code || '')}</span></div></div></td><td>${exchange}</td><td>${tradeLink}</td><td class="${changeClass}">${changeText}</td><td>${item.trust_score == null ? '-' : escapeCurrencyText(item.trust_score)}</td></tr>`;
+        }
+
+        if (kind === 'unique') {
+          const subcategory = uniqueSubcategoryLabels[item.subcategory] || item.subcategory || '';
+          return `<tr><td><div class="tw-currency-item">${targetIcon}<div>${escapeCurrencyText(itemName)}<span class="tw-currency-code">#${escapeCurrencyText(item.id)}</span></div></div></td><td>${escapeCurrencyText(categoryLabel)}${subcategory ? ` · ${escapeCurrencyText(subcategory)}` : ''}</td><td>${exchange}</td><td>${tradeLink}</td><td>${listingCount.toLocaleString('zh-Hant')}</td><td>${escapeCurrencyText(trust)}</td></tr>`;
+        }
+
+        if (kind === 'gem') {
+          const detail = item.variantLabel || [item.level ? `Lv${item.level}` : '', item.quality ? `${item.quality}%` : ''].filter(Boolean).join(' / ');
+          return `<tr><td><div class="tw-currency-item">${targetIcon}<div>${escapeCurrencyText(itemName)}<span class="tw-currency-code">${escapeCurrencyText(detail || `#${item.id}`)}</span></div></div></td><td>${escapeCurrencyText(categoryLabel)}</td><td>${exchange}</td><td>${tradeLink}</td><td>${listingCount.toLocaleString('zh-Hant')}</td><td>${escapeCurrencyText(trust)}</td></tr>`;
+        }
+
+        const beastStatus = item.status === 'fresh' ? '新鮮' : item.status === 'stale' ? '過期' : item.status || '-';
+        return `<tr><td><div class="tw-currency-item">${targetIcon}<div>${escapeCurrencyText(itemName)}<span class="tw-currency-code">${escapeCurrencyText(item.enName || '')}</span></div></div></td><td>${escapeCurrencyText(categoryLabel)}</td><td>${exchange}</td><td>${tradeLink}</td><td>${listingCount.toLocaleString('zh-Hant')}</td><td>${escapeCurrencyText(beastStatus)}</td></tr>`;
+      }).join('') : `<tr><td colspan="${kind === 'currency' ? 5 : 6}" class="empty">${escapeCurrencyText(panel._priceMessage || `沒有符合條件的${priceKindLabels[kind] || '物品'}`)}</td></tr>`;
+      panel.querySelector('[data-currency-count]').textContent = panel._priceStatus === 'unavailable'
+        ? '暫無資料' : `${items.length} / ${(panel._priceItems || []).length} 種`;
+    }
+
+    function priceIcon(path, alt) {
+      if (typeof path !== 'string' || !/^https:\/\/(web|webtw)\.poecdn\.com\//.test(path)) return '';
+      return `<img class="tw-price-icon" src="${escapeCurrencyText(path)}" alt="${escapeCurrencyText(alt)}" title="${escapeCurrencyText(alt)}" loading="lazy">`;
+    }
+
+    function sourceCategoryIcon(panel, category) {
+      const categoryId = category.id || '';
+      const categoryImage = category.imageUrl || category.image;
+      const representative = (panel._priceItems || []).find((item) => {
+        if (!categoryId) return true;
+        return (item.category_id || item.category || item.beastType) === categoryId;
+      });
+      const imageUrl = categoryImage || representative?.imageUrl || representative?.image || '';
+      if (typeof imageUrl !== 'string' || !/^https:\/\/(web|webtw)\.poecdn\.com\//.test(imageUrl)) {
+        return '<span class="price-category-icon-blank" aria-hidden="true"></span>';
+      }
+      return `<img class="price-category-icon" src="${escapeCurrencyText(imageUrl)}" alt="${escapeCurrencyText(category.label)}" title="${escapeCurrencyText(category.label)}" loading="lazy">`;
+    }
+
+    function updatePriceNavigationIcons(panel) {
+      const game = panel.dataset.game;
+      const kind = panel.dataset.kind;
+      const category = (panel._priceCategories || [])[0] || { id: '', label: priceKindLabels[kind] };
+      const iconMarkup = sourceCategoryIcon(panel, category);
+      const iconSource = iconMarkup.match(/src="([^"]+)"/);
+      for (const [selector, label] of [
+        [`[data-price-kind-icon="${game}-${kind}"]`, category.label || priceKindLabels[kind]],
+        [`[data-price-nav-icon="${game}"]`, '物價'],
+      ]) {
+        const image = document.querySelector(selector);
+        if (!image) continue;
+        if (iconSource) {
+          image.src = iconSource[1];
+          image.alt = label;
+          image.title = label;
+        } else {
+          image.removeAttribute('src');
+          image.alt = '';
+          image.removeAttribute('title');
+        }
+      }
+    }
+
+    function updatePriceCategoryList(panel) {
+      const game = panel.dataset.game;
+      const kind = panel.dataset.kind;
+      const target = document.querySelector(`[data-price-category-list="${game}-${kind}"]`);
+      if (!target) return;
+      const countByCategory = new Map();
+      for (const item of panel._priceItems || []) {
+        const id = item.category_id || item.category || item.beastType;
+        if (id) countByCategory.set(id, (countByCategory.get(id) || 0) + 1);
+      }
+      const selected = panel._categoryFilter || '';
+      const choices = [{ id: '', label: '全部分類', count: (panel._priceItems || []).length }];
+      for (const category of panel._priceCategories || []) {
+        const label = uniqueCategoryFallbacks[category.id] || priceCategoryFallbacks[kind]?.[category.id] || category.label || category.id;
+        choices.push({ id: category.id, label, imageUrl: category.imageUrl, count: countByCategory.get(category.id) || 0 });
+      }
+      target.innerHTML = choices.map((category) => `<button class="price-category-leaf${selected === category.id ? ' active' : ''}" type="button" data-price-category="${escapeCurrencyText(category.id)}" data-game="${game}" data-kind="${kind}"><span class="price-category-label">${sourceCategoryIcon(panel, category)}<span>${escapeCurrencyText(category.label)}</span></span><span class="price-category-count">${category.count}</span></button>`).join('');
+      target.querySelectorAll('[data-price-category]').forEach((button) => {
+        button.addEventListener('click', () => selectPriceCategory(game, kind, button.dataset.priceCategory));
+      });
+    }
+
+    async function loadTwPricePanel(panel) {
+      if (panel.dataset.loading === 'true') return;
+      panel.dataset.loading = 'true';
+      const rows = panel.querySelector('[data-currency-rows]');
+      const refresh = panel.querySelector('[data-currency-refresh]');
+      const kind = panel.dataset.kind;
+      const emptyColumns = kind === 'currency' ? 5 : 6;
+      panel.querySelector('[data-currency-error]').textContent = '';
+      refresh.disabled = true;
+      rows.innerHTML = `<tr><td colspan="${emptyColumns}" class="empty">正在載入台服行情…</td></tr>`;
+      try {
+        const response = await fetch(`/api/tw-pricer/${kind}?game=${panel.dataset.game}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+        panel._priceItems = Array.isArray(data.items) ? data.items : [];
+        panel._priceCategories = Array.isArray(data.categories) ? data.categories : [];
+        panel._unitIcons = data.unit_icons || {};
+        panel._priceStatus = data.status || 'ok';
+        panel._priceMessage = data.message || '';
+        panel._priceLeague = data.league || '';
+        const savedCategory = localStorage.getItem(`poe-price-category-${panel.dataset.game}-${kind}`) || '';
+        panel._categoryFilter = panel._priceCategories.some((category) => category.id === savedCategory) ? savedCategory : '';
+        updatePriceNavigationIcons(panel);
+        updatePriceCategoryList(panel);
+        panel.querySelector('[data-currency-league]').textContent = data.league || '-';
+        panel.querySelector('[data-currency-updated]').textContent = data.source_updated_at
+          ? new Date(data.source_updated_at).toLocaleString('zh-TW') : '-';
+        panel.dataset.loaded = 'true';
+        renderTwPricePanel(panel);
+      } catch (error) {
+        panel._priceItems = [];
+        panel._priceStatus = 'error';
+        panel._priceLeague = '';
+        panel.querySelector('[data-currency-league]').textContent = '-';
+        panel.querySelector('[data-currency-count]').textContent = '0 種';
+        panel.querySelector('[data-currency-error]').textContent = error.message || '行情載入失敗';
+        rows.innerHTML = `<tr><td colspan="${emptyColumns}" class="empty">目前無法取得台服行情，請稍後再試。</td></tr>`;
+      } finally {
+        panel.dataset.loading = 'false';
+        refresh.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('.tw-currency-panel').forEach((panel) => {
+      panel.querySelector('[data-currency-search]').addEventListener('input', () => renderTwPricePanel(panel));
+      panel.querySelector('[data-currency-sort]').addEventListener('change', () => renderTwPricePanel(panel));
+      panel.querySelector('[data-currency-refresh]').addEventListener('click', () => loadTwPricePanel(panel));
+    });
+
+    function setPriceKindExpanded(game, kind, expanded, remember = true) {
+      const toggle = document.querySelector(`[data-price-kind="${kind}"][data-game="${game}"]`);
+      const list = document.querySelector(`[data-price-category-list="${game}-${kind}"]`);
+      if (!toggle || !list) return;
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      list.hidden = !expanded;
+      if (remember) localStorage.setItem(`poe-price-kind-${game}-${kind}`, expanded ? 'open' : 'closed');
+    }
+
+    function selectPriceCategory(game, kind, categoryId) {
+      const panel = document.querySelector(`[data-direct-category="${game}-tw-${kind}"]`);
+      if (!panel) return;
+      panel._categoryFilter = categoryId || '';
+      localStorage.setItem(`poe-price-category-${game}-${kind}`, panel._categoryFilter);
+      setPriceNavExpanded(game, true);
+      setPriceKindExpanded(game, kind, true);
+      document.querySelectorAll(`[data-price-category-list="${game}-${kind}"] [data-price-category]`).forEach((button) => {
+        button.classList.toggle('active', button.dataset.priceCategory === panel._categoryFilter);
+      });
+      activateCategory(`${game}-tw-${kind}`);
+      if (panel.dataset.loaded === 'true') renderTwPricePanel(panel);
+    }
+
+    function setPriceNavExpanded(game, expanded, remember = true) {
+      const toggle = document.querySelector(`[data-price-nav-toggle="${game}"]`);
+      const children = document.querySelector(`[data-price-nav-children="${game}"]`);
+      if (!toggle || !children) return;
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      children.hidden = !expanded;
+      if (remember) localStorage.setItem(`poe-price-nav-${game}`, expanded ? 'open' : 'closed');
+    }
+
+    document.querySelectorAll('[data-price-nav-toggle]').forEach((toggle) => {
+      const game = toggle.dataset.priceNavToggle;
+      const saved = localStorage.getItem(`poe-price-nav-${game}`);
+      setPriceNavExpanded(game, saved !== 'closed', false);
+      toggle.addEventListener('click', () => {
+        setPriceNavExpanded(game, toggle.getAttribute('aria-expanded') !== 'true');
+      });
+    });
+
+    document.querySelectorAll('[data-price-kind]').forEach((toggle) => {
+      const game = toggle.dataset.game;
+      const kind = toggle.dataset.priceKind;
+      const saved = localStorage.getItem(`poe-price-kind-${game}-${kind}`);
+      setPriceKindExpanded(game, kind, saved === 'open', false);
+      toggle.addEventListener('click', () => {
+        const isActive = toggle.classList.contains('active');
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        if (isActive && isExpanded) {
+          setPriceKindExpanded(game, kind, false);
+          return;
+        }
+        setPriceKindExpanded(game, kind, true);
+        const selected = localStorage.getItem(`poe-price-category-${game}-${kind}`) || '';
+        selectPriceCategory(game, kind, selected);
+      });
+    });
+
     categoryButtons.forEach((button) => {
-      button.addEventListener('click', () => activateCategory(button.dataset.categoryTarget));
+      button.addEventListener('click', () => {
+        if (button.dataset.priceKind) return;
+        if (button.dataset.categoryLocked === 'true') {
+          openStrategyUnlock(button.dataset.categoryTarget);
+          return;
+        }
+        activateCategory(button.dataset.categoryTarget);
+      });
     });
 
     docButtons.forEach((button) => {
@@ -1036,8 +1468,12 @@
 
     const savedCategory = localStorage.getItem('poe-active-category');
     const savedDoc = localStorage.getItem('poe-active-doc');
+    const requestedPanel = new URLSearchParams(window.location.search).get('panel');
 
-    if (savedDoc && document.querySelector(`[data-doc-target="${savedDoc}"]`)) {
+    if (requestedPanel && document.querySelector(`[data-category-target="${requestedPanel}"]`)) {
+      activateCategory(requestedPanel);
+      history.replaceState(null, '', '/');
+    } else if (savedDoc && document.querySelector(`[data-doc-target="${savedDoc}"]`)) {
       activateDocument(savedDoc);
     } else if (savedCategory && document.querySelector(`[data-category-target="${savedCategory}"]`)) {
       activateCategory(savedCategory);

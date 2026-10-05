@@ -1,5 +1,7 @@
 # POE Flask 網站續聊交接檔
 
+> 本交接檔是操作摘要；新增或修改功能前，先遵循倉庫根目錄 `PROJECT_RULES.md`。如部署流程與核心規範衝突，以核心規範為準。
+
 ## 1) 專案目標
 - 用 Flask 建一個 POE 知識庫網站。
 - 內容以 Markdown 維護，網站自動掃描分類並顯示。
@@ -56,7 +58,8 @@
 3. 圖片做語義化命名，複製到 static/images。
 4. 文件放到正確分類資料夾（content/strategy、content/crafting、content/beetle）。
 5. 如有需要同步到本地備份資料夾（策略/做裝/甲蟲）。
-6. 直接部署 Cloud Run 更新網站。
+6. 本機啟動並依驗收條件實測，更新相關文件。
+7. 只有在使用者明確回覆 OK 後才部署 Cloud Run。
 
 ## 6) 下次對話直接貼這段（快速啟動模板）
 請依照 SESSION_HANDOFF.md 的流程處理。
@@ -75,8 +78,8 @@
 要求：
 - 幫我整理成完整 md
 - 幫我改圖名並加入文件
-- 幫我更新部署
+- 幫我本機實測；若需部署，先回報結果並等待我明確回覆 OK
 
-## 7) 部署指令（固定）
+## 7) 部署指令（取得使用者明確 OK 後才執行）
 在 c:/code/Keeps/web/poe_web/python_web 執行：
 gcloud run deploy poe-python-web --source . --region asia-east1 --project udata-gcp-1 --allow-unauthenticated --platform managed --port 8080

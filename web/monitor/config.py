@@ -6,85 +6,7 @@ LEAGUE_NAME = "runesofaldur"  # Runes of Aldur
 # 注意：API 使用大寫開頭的聯盟名稱
 CURRENT_LEAGUE_NAME = "Standard"  # Standard（大寫）
 
-# ── Spirit Walker 抓寵目標 ────────────────────────────────────────────────────
-BEAST_TARGETS = [
-    {
-        "id": "silverfist",
-        "zh": "銀拳",
-        "en": "Mighty Silverfist",
-        "location": "Act 3，叢林遺跡",
-        "priority": "高",
-        "stage": "前期",
-        "stage_order": 1,
-        "keywords": ["silverfist", "mighty silverfist"],
-        "description": "白毛大猩猩，官方展示 Spirit Walker 時用來示範抓寵，最早可抓到的強力寵物。",
-    },
-    {
-        "id": "yama",
-        "zh": "白色山魔",
-        "en": "Yama the White",
-        "location": "Act 4，Halls of the Dead",
-        "priority": "中高",
-        "stage": "前期",
-        "stage_order": 2,
-        "keywords": ["yama", "yama the white"],
-        "description": "白毛猴王，會衝鋒，前期過渡寵，比銀拳晚遇到。",
-    },
-    {
-        "id": "scourge",
-        "zh": "天空災厄",
-        "en": "Scourge of the Skies",
-        "location": "Act 4，Shrike Island",
-        "priority": "高",
-        "stage": "中期",
-        "stage_order": 3,
-        "keywords": ["scourge of the skies", "scourge skies"],
-        "description": "大型鳥王，風暴/龍捲風技能，理論清圖能力強，Act 4 後換寵重點。",
-    },
-    {
-        "id": "chetza",
-        "zh": "切特札",
-        "en": "Chetza, the Feathered Plague",
-        "location": "Trial of Chaos 第 4 層",
-        "priority": "極高",
-        "stage": "試煉",
-        "stage_order": 4,
-        "keywords": ["chetza", "feathered plague"],
-        "description": "黑色瘟疫鳥，身上多紅眼睛，龍捲風技能，開季第一波熱門神獸最強候選。",
-    },
-    {
-        "id": "bahlak",
-        "zh": "巴拉克",
-        "en": "Bahlak, the Sky Seer",
-        "location": "Trial of Chaos 第 4 層",
-        "priority": "中高",
-        "stage": "試煉",
-        "stage_order": 5,
-        "keywords": ["bahlak", "sky seer"],
-        "description": "貓頭鷹風格，風暴系技能多，切特札替代方案，需實測 AI 穩定性。",
-    },
-    {
-        "id": "morvak",
-        "zh": "莫瓦克",
-        "en": "Morvak, the Infernal",
-        "location": "Endgame 地圖 Boss",
-        "priority": "高",
-        "stage": "後期",
-        "stage_order": 6,
-        "keywords": ["morvak", "infernal morvak"],
-        "description": "高血量高傷倍，偏打王型，Endgame 後期打王寵物主力。",
-    },
-]
-
-# ── Reddit 搜尋設定 ────────────────────────────────────────────────────────────
-# 每次只取最重要的幾組，減少 rate-limit 壓力
-REDDIT_QUERIES = [
-    ("pathofexile2", "spirit walker tame beast"),
-    ("pathofexile2", "chetza bahlak silverfist scourge morvak"),
-    ("pathofexile", "poe2 spirit walker companion beast"),
-]
-
-# ── poe.ninja Economy 監控品項 ────────────────────────────────────────────────
+# ── poe.ninja Economy 類型 ────────────────────────────────────────────────────
 ECONOMY_TYPES = [
     # poe.ninja PoE2 Currency Exchange API — type 對應路徑
     # 格式：(type_param, 顯示標籤)
@@ -120,7 +42,5 @@ POE1_ECONOMY_TYPES = [
 
 # ── 快取 TTL（秒）─────────────────────────────────────────────────────────────
 CACHE_TTL = {
-    "builds":  900,   # 15 分鐘
     "economy": 1800,  # 30 分鐘
-    "reddit":  300,   # 5 分鐘
 }

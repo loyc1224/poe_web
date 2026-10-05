@@ -1,5 +1,4 @@
 import threading
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 import json
 import sqlite3
@@ -13,29 +12,32 @@ from urllib.parse import urlencode, quote_plus
 
 import markdown
 import requests
+from dotenv import load_dotenv
 from flask import Flask, render_template, Response, request, abort, redirect, session
 
 import re
 
 from monitor import (
-    BEAST_TARGETS,
     CURRENT_LEAGUE_NAME,
     LEAGUE_NAME,
     POE1_LEAGUE,
-    fetch_builds,
     fetch_economy,
-    fetch_meta_builds,
     fetch_poe1_economy,
-    fetch_reddit,
-    generate_recommendations,
 )
 from monitor.config import POE2_LEAGUES, POE1_STANDARD
 from monitor.translations import ITEM_ZH
-
-app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", os.getenv("SECRET_KEY", "dev-insecure-change-me"))
+from monitor.tw_pricer_client import load_tw_price_dataset
+from monitor.tw_pricer_source import refresh_all_tw_prices
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
+app = Flask(__name__)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or secrets.token_hex(32)
+STRATEGY_PASSWORD = os.getenv("STRATEGY_PASSWORD", "")
+_strategy_login_attempts: dict[str, tuple[int, float]] = {}
+_strategy_login_lock = threading.Lock()
+
 CONTENT_DIR = BASE_DIR / "content"
 TRAFFIC_DB = BASE_DIR / "cache" / "traffic.db"
 STASH_DB = BASE_DIR / "cache" / "stash.db"
@@ -88,7 +90,7 @@ def build_summary(text: str) -> str:
     return "尚未提供摘要。"
 
 
-def load_games() -> list[dict[str, object]]:
+def load_games(include_strategies: bool = True) -> list[dict[str, object]]:
     if not CONTENT_DIR.exists():
         return []
 
@@ -97,7 +99,9 @@ def load_games() -> list[dict[str, object]]:
         categories: list[dict[str, object]] = []
         for category_dir in sorted(path for path in game_dir.iterdir() if path.is_dir()):
             documents: list[dict[str, str]] = []
-            for file_path in sorted(category_dir.glob("*.md")):
+            markdown_files = sorted(category_dir.glob("*.md"))
+            locked = category_dir.name == "strategy" and not include_strategies
+            for file_path in ([] if locked else markdown_files):
                 text = file_path.read_text(encoding="utf-8")
                 title = get_doc_title(text, file_path.stem)
                 doc_id = f"{game_dir.name}-{category_dir.name}-{file_path.stem}"
@@ -119,7 +123,8 @@ def load_games() -> list[dict[str, object]]:
                     "name": category_dir.name,
                     "label": make_label(CATEGORY_LABELS, category_dir.name),
                     "game": game_dir.name,
-                    "count": len(documents),
+                    "count": len(markdown_files),
+                    "locked": locked,
                     "documents": documents,
                 }
             )
@@ -133,18 +138,6 @@ def load_games() -> list[dict[str, object]]:
         )
 
     return games
-
-
-def load_trade_links() -> dict:
-    """載入快速交易連結配置"""
-    trade_links_file = CONTENT_DIR / "trade_links.json"
-    if not trade_links_file.exists():
-        return {"poe1": [], "poe2": []}
-    try:
-        with open(trade_links_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"poe1": [], "poe2": []}
 
 
 def load_shop_filters() -> dict:
@@ -759,17 +752,62 @@ def get_traffic_stats() -> dict:
 
 @app.route("/")
 def home():
-    games = load_games()
-    trade_links = load_trade_links()
+    strategy_unlocked = _is_strategy_unlocked()
+    games = load_games(include_strategies=strategy_unlocked)
     shop_filters = load_shop_filters()
     traffic_stats = record_home_visit(request)
     return render_template(
         "index.html",
         games=games,
-        trade_links=trade_links,
         shop_filters=shop_filters,
         traffic_stats=traffic_stats,
+        strategy_unlocked=strategy_unlocked,
+        strategy_password_configured=bool(STRATEGY_PASSWORD),
     )
+
+
+def _is_strategy_unlocked() -> bool:
+    if not STRATEGY_PASSWORD:
+        return False
+    expected = hashlib.sha256(STRATEGY_PASSWORD.encode("utf-8")).hexdigest()
+    stored = session.get("strategy_password_digest", "")
+    return isinstance(stored, str) and secrets.compare_digest(stored, expected)
+
+
+@app.route("/api/strategy/unlock", methods=["POST"])
+def unlock_strategy():
+    if not STRATEGY_PASSWORD:
+        return {"status": "error", "message": "尚未設定策略密碼"}, 503
+
+    ip_address = request.remote_addr or "unknown"
+    now = time.time()
+    with _strategy_login_lock:
+        attempts, started_at = _strategy_login_attempts.get(ip_address, (0, now))
+        if now - started_at >= 900:
+            attempts, started_at = 0, now
+        if attempts >= 5:
+            return {"status": "error", "message": "嘗試次數過多，請 15 分鐘後再試"}, 429
+
+    payload = request.get_json(silent=True) or {}
+    password = payload.get("password")
+    if not isinstance(password, str) or not password.isascii() or not secrets.compare_digest(password, STRATEGY_PASSWORD):
+        with _strategy_login_lock:
+            attempts, started_at = _strategy_login_attempts.get(ip_address, (0, now))
+            if now - started_at >= 900:
+                attempts, started_at = 0, now
+            _strategy_login_attempts[ip_address] = (attempts + 1, started_at)
+        return {"status": "error", "message": "密碼錯誤"}, 401
+
+    with _strategy_login_lock:
+        _strategy_login_attempts.pop(ip_address, None)
+    session["strategy_password_digest"] = hashlib.sha256(STRATEGY_PASSWORD.encode("utf-8")).hexdigest()
+    return {"status": "ok"}
+
+
+@app.route("/api/strategy/lock", methods=["POST"])
+def lock_strategy():
+    session.pop("strategy_password_digest", None)
+    return {"status": "ok"}
 
 
 @app.route("/health")
@@ -792,6 +830,54 @@ def pricer():
         poe2_leagues=POE2_LEAGUES,
         poe1_leagues=[POE1_LEAGUE, POE1_STANDARD],
     )
+
+
+@app.route("/tw-pricer")
+def legacy_tw_pricer():
+    game = (request.args.get("game") or "poe1").strip().lower()
+    if game not in ("poe1", "poe2"):
+        game = "poe1"
+    return redirect(f"/?panel={game}-tw-currency", code=302)
+
+
+@app.route("/api/tw-pricer/<kind>")
+def tw_pricer_dataset(kind):
+    game = (request.args.get("game") or "poe1").strip().lower()
+    if game not in ("poe1", "poe2"):
+        return {"status": "error", "message": "無效的 game 參數"}, 400
+    if kind not in ("currency", "unique", "gem", "beast") or (kind == "beast" and game != "poe1"):
+        return {"status": "error", "message": "無效的物價類別"}, 404
+
+    try:
+        return load_tw_price_dataset(game, kind)
+    except FileNotFoundError as exc:
+        return {"status": "unavailable", "message": str(exc)}, 503
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}, 502
+
+
+@app.route("/api/tw-pricer/refresh", methods=["POST"])
+def refresh_tw_pricer_data():
+    refresh_token = os.getenv("TW_CURRENCY_REFRESH_TOKEN", "")
+    request_token = request.headers.get("X-Refresh-Token", "")
+    if not refresh_token or not secrets.compare_digest(request_token, refresh_token):
+        return {"status": "error", "message": "未授權的資料更新請求"}, 403
+
+    try:
+        updated = refresh_all_tw_prices()
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}, 502
+
+    return {
+        "status": "ok",
+        "updated": {
+            game: {
+                kind: {"league": data["league"], "count": len(data["items"])}
+                for kind, data in game_data.items()
+            }
+            for game, game_data in updated.items()
+        },
+    }
 
 
 @app.route("/api/pricer/currency")
@@ -1022,108 +1108,6 @@ def img_proxy():
         abort(502)
     return Response(r.content, content_type=r.headers.get("Content-Type", "image/png"),
                     headers={"Cache-Control": "public, max-age=86400"})
-
-
-# ── Spirit Walker 監控 ───────────────────────────────────────────────────────
-_refresh_lock = threading.Lock()
-
-
-@app.route("/monitor")
-def monitor():
-    return render_template(
-        "monitor.html",
-        beast_targets=BEAST_TARGETS,
-        league=LEAGUE_NAME,
-        current_league=CURRENT_LEAGUE_NAME,
-        poe1_league=POE1_LEAGUE,
-    )
-
-
-@app.route("/api/monitor/data")
-def monitor_data():
-    _TIMEOUT = 4  # 每個 fetch 最多等 4 秒，超時回傳空資料
-    _empty_builds  = {"status": "unavailable", "total_characters": 0, "spirit_walker_count": 0,
-                      "companion_counts": {b["id"]: 0 for b in BEAST_TARGETS}}
-    _empty_economy = {"status": "unavailable", "items": [], "errors": []}
-    _empty_reddit  = {"status": "unavailable", "posts": [], "beast_mention_counts": {}, "errors": []}
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        f_builds  = pool.submit(fetch_builds)
-        f_economy = pool.submit(fetch_economy)
-        f_reddit  = pool.submit(fetch_reddit)
-        try:    builds  = f_builds.result(timeout=_TIMEOUT)
-        except Exception: builds = _empty_builds
-        try:    economy = f_economy.result(timeout=_TIMEOUT)
-        except Exception: economy = _empty_economy
-        try:    reddit  = f_reddit.result(timeout=_TIMEOUT)
-        except Exception: reddit = _empty_reddit
-    recs = generate_recommendations(builds, economy, reddit)
-    return {
-        "builds":          builds,
-        "economy":         economy,
-        "reddit":          reddit,
-        "recommendations": recs,
-        "league":          LEAGUE_NAME,
-    }
-
-
-@app.route("/api/monitor/economy/league/<league_name>")
-def monitor_economy_by_league(league_name: str):
-    """依聯盟名稱取得 economy 資料（供現有聯盟物價分頁使用）。"""
-    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
-        return {"status": "error", "message": "無效的聯盟名稱"}, 400
-    economy = fetch_economy(league=league_name)
-    return economy
-
-
-@app.route("/api/monitor/meta-builds")
-def monitor_meta_builds():
-    """開季聯盟熱門流派資料（技能排行、DPS 排行、角色清單）。"""
-    return fetch_meta_builds()
-
-
-@app.route("/api/monitor/meta-builds/league/<league_name>")
-def monitor_meta_builds_by_league(league_name: str):
-    """指定聯盟熱門流派資料。"""
-    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
-        return {"status": "error", "message": "無效的聯盟名稱"}, 400
-    return fetch_meta_builds(league=league_name)
-
-
-@app.route("/api/monitor/poe1/economy")
-def monitor_poe1_economy():
-    """PoE1 目前聯盟物價資料。"""
-    return fetch_poe1_economy()
-
-
-@app.route("/api/monitor/poe1/economy/league/<league_name>")
-def monitor_poe1_economy_by_league(league_name: str):
-    """PoE1 指定聯盟物價資料。"""
-    if not re.match(r'^[A-Za-z0-9 _\-]{1,60}$', league_name):
-        return {"status": "error", "message": "無效的聯盟名稱"}, 400
-    return fetch_poe1_economy(league=league_name)
-
-
-@app.route("/api/monitor/refresh", methods=["POST"])
-def monitor_refresh():
-    if not _refresh_lock.acquire(blocking=False):
-        return {"status": "busy", "message": "重新整理已在進行中，請稍候"}, 429
-    try:
-        builds  = fetch_builds(force=True)
-        economy = fetch_economy(force=True)
-        reddit  = fetch_reddit(force=True)
-        recs    = generate_recommendations(builds, economy, reddit)
-        return {
-            "status":          "ok",
-            "builds":          builds,
-            "economy":         economy,
-            "reddit":          reddit,
-            "recommendations": recs,
-            "league":          LEAGUE_NAME,
-        }
-    except Exception as exc:
-        return {"status": "error", "message": str(exc)}, 500
-    finally:
-        _refresh_lock.release()
 
 
 if __name__ == "__main__":
