@@ -1,0 +1,146 @@
+# ===============================================================
+# POE2 即時經濟篩選器 - 自行產生（非官方 NeverSink 檔案）
+# 聯盟：Standard
+# 資料時間：2026-09-14 09:29:24
+# 資料來源：poe.ninja 國際服估價（僅供相對貴賤參考，非台服官方成交價！）
+#           pathofexile.tw 為官方獨立台服經濟圈，poe.ninja 沒有台服數據。
+#           已手動校正 0 項通貨（見 tw_price_overrides.json），
+#           其餘項目仍是國際服估價，請自行斟酌。
+# 狀態：ok  已抓取物品數：58
+# 重新產生：cd web && python -m filter_gen.generate_filter --league Standard --force
+# ===============================================================
+
+#===== 即時經濟通貨分級（依 poe.ninja 神聖石價格自動產生）=====
+Show # 通貨 - S 神話級（>= 20 divine）
+	Class == "Stackable Currency"
+	BaseType == "Vaal Catalysing Infuser" "Orb of Extraction" "Mirror of Kalandra" "Concentrated Liquid Isolation" "Kopec's Orb of Sacrifice" "Potent Liquid Ferocity" "Potent Liquid Contempt" "Fracturing Orb" "Hinekora's Lock"
+	SetFontSize 45
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 0 0 255
+	SetBackgroundColor 0 0 0 255
+	PlayAlertSound 6 300
+	MinimapIcon 0 Red Star
+
+Show # 通貨 - A 極稀有（>= 5 divine）
+	Class == "Stackable Currency"
+	BaseType == "Vaal Blacksmith's Infuser" "Ancient Potent Liquid Melancholy" "Ancient Concentrated Liquid Isolation" "Vaal Arcanist's Infuser" "Crystallised Corruption"
+	SetFontSize 42
+	SetTextColor 0 0 0 255
+	SetBorderColor 255 128 0 255
+	SetBackgroundColor 255 200 0 255
+	PlayAlertSound 3 300
+	MinimapIcon 0 Yellow Star
+
+Show # 通貨 - B 稀有（>= 1 divine）
+	Class == "Stackable Currency"
+	BaseType == "Ancient Liquid Paranoia" "Perfect Chaos Orb" "Vaal Cultivation Orb" "Ancient Liquid Disgust" "Potent Liquid Melancholy" "Perfect Jeweller's Orb" "Cryptic Key" "Ancient Infuser" "Concentrated Liquid Suffering" "Core Destabiliser" "Architect's Orb" "Concentrated Liquid Fear"
+	SetFontSize 40
+	SetTextColor 0 0 0 255
+	SetBorderColor 0 200 255 255
+	SetBackgroundColor 150 220 255 255
+	PlayAlertSound 2 300
+	MinimapIcon 1 Blue Diamond
+
+Show # 通貨 - C 有價值（>= 0.2 divine）
+	Class == "Stackable Currency"
+	BaseType == "Vaal Armourer's Infuser" "Perfect Exalted Orb" "Gemcutter's Prism" "Perfect Regal Orb" "Chaos Orb" "Liquid Envy" "Greater Chaos Orb"
+	SetFontSize 36
+	SetTextColor 0 0 0 255
+	SetBorderColor 0 170 0 255
+	SetBackgroundColor 200 255 200 255
+	PlayAlertSound 1 200
+	MinimapIcon 2 White Circle
+
+Show # 通貨 - D 一般（>= 0.03 divine）
+	Class == "Stackable Currency"
+	BaseType == "Orb of Annulment" "Blacksmith's Whetstone" "Glassblower's Bauble" "Artificer's Orb" "Vaal Orb" "Arcanist's Etcher" "Perfect Orb of Augmentation" "Orb of Chance" "Perfect Orb of Transmutation" "Greater Regal Orb" "Greater Exalted Orb" "Greater Jeweller's Orb" "Diluted Liquid Greed"
+	SetFontSize 32
+	SetTextColor 255 255 255 255
+	SetBorderColor 120 120 120 200
+	SetBackgroundColor 40 40 40 200
+
+Show # 通貨 - 其餘（低價值，僅縮小顯示，不隱藏）
+	Class == "Stackable Currency"
+	BaseType == "Lesser Jeweller's Orb" "Regal Orb" "Exalted Orb" "Orb of Augmentation" "Divine Orb" "Armourer's Scrap" "Greater Orb of Augmentation" "Scroll of Wisdom" "Liquid Despair" "Diluted Liquid Guilt" "Orb of Alchemy" "Greater Orb of Transmutation"
+	SetFontSize 18
+	SetTextColor 200 200 200 255
+	SetBorderColor 100 100 100 150
+
+
+#===== 基礎規則（簡化版，只為了讓其他物品也看得到，可自行換成完整版 NeverSink 骨架）=====
+
+# 傳說（唯一）裝備 - 一律顯示，最醒目
+Show # 傳說裝備
+	Rarity Unique
+	SetFontSize 45
+	SetTextColor 175 96 37 255
+	SetBorderColor 175 96 37 255
+	SetBackgroundColor 60 30 0 255
+	PlayAlertSound 3 300
+	MinimapIcon 0 Yellow Star
+
+# 稀有裝備 - 依地圖等級顯示，中高亮度
+Show # 稀有裝備
+	Rarity Rare
+	AreaLevel >= 55
+	SetFontSize 38
+	SetTextColor 255 255 0 255
+	SetBorderColor 255 255 0 255
+	MinimapIcon 1 Yellow Diamond
+
+Show # 稀有裝備（低階，字縮小）
+	Rarity Rare
+	SetFontSize 24
+	SetTextColor 255 255 0 200
+	SetBorderColor 255 255 0 120
+
+# 命運卡
+Show # 命運卡
+	Class == "Divination Cards"
+	SetFontSize 40
+	SetTextColor 0 0 0 255
+	SetBackgroundColor 0 240 190 255
+	PlayAlertSound 2 300
+	MinimapIcon 1 Yellow Triangle
+
+# 符文 / 靈魂核心
+Show # 符文與靈魂核心
+	Class == "Runes" "Soul Cores"
+	SetFontSize 38
+	SetTextColor 255 255 255 255
+	SetBorderColor 0 240 190 255
+	MinimapIcon 1 Blue Circle
+
+# 高階石板（Waystone）
+Show # 高階石板
+	Class == "Waystones"
+	WaystoneTier >= 11
+	SetFontSize 40
+	SetTextColor 255 255 255 255
+	SetBorderColor 255 0 0 255
+	MinimapIcon 0 Red Square
+
+Show # 一般石板
+	Class == "Waystones"
+	SetFontSize 30
+	SetTextColor 200 200 200 255
+	SetBorderColor 120 120 120 200
+
+# 護符
+Show # 護符
+	Class == "Charms"
+	SetFontSize 32
+	SetTextColor 200 240 255 255
+	SetBorderColor 0 170 255 255
+
+# 技能寶石 / 未切割寶石
+Show # 寶石
+	Class == "Skill Gems" "Uncut Skill Gems" "Uncut Spirit Gems"
+	SetFontSize 38
+	SetTextColor 30 190 190 255
+	SetBorderColor 40 130 130 255
+	MinimapIcon 1 Green Triangle
+
+# 保底規則：任何沒被上面規則接住的東西一律顯示（絕不隱藏未知物品，避免漏看新物品）
+Show # 保底顯示 - 未知/其餘物品
+	SetFontSize 32

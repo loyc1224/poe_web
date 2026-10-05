@@ -1,0 +1,5 @@
+{
+  "_說明": "手動校正台服實際價格用。去 pathofexile.tw/trade/exchange 登入查看真實兌換價後，把物品名稱與『相當於多少神聖石』填在這裡，數字會覆蓋 poe.ninja 的國際服估價。不需要的通貨可以刪掉那一行，留空物件 {} 就是完全使用 poe.ninja 數據。",
+  "_範例_Divine Orb": 1,
+  "_範例_Exalted Orb": 0.01
+}
