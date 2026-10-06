@@ -8,6 +8,7 @@
 poe_web/
   PROJECT_RULES.md          核心規範與驗收要求
   AGENTS.md                Agent入口，引用核心規範
+  ARCHITECTURE.md           架構圖、分層原因與可重用專案骨架
   REPOSITORY_MAP.md         目錄／功能查找索引
   .github/                 Copilot指示與CI／部署工作流程
   web/
@@ -86,3 +87,4 @@ poe_web/
 | 1.0.0 | 2026-10-06 | 建立功能目錄分類、查找表與漸進搬移規範，歸類倉庫領域模組。 |
 | 1.0.1 | 2026-10-06 | 將 economy／台服行情分入各自套件，測試分 unit／integration，更新功能查找路徑。 |
 | 1.1.0 | 2026-10-06 | Web操作腳本歸入scripts/、專用文件歸入docs/，保留Flask／Docker必要根入口並更新所有引用。 |
+| 1.2.0 | 2026-10-06 | 加入根目錄架構說明及 Mermaid 圖，連結專案層級文件並說明可供其他專案套用的目錄原則。 |

@@ -14,7 +14,7 @@
 | 台服物價更新器 | `monitor/tw_pricer/` 同步行情／完整名稱，驗證後發布 JSON |
 | 台服物價 API | `monitor/tw_pricer/` 讀取已發布 JSON，不呼叫行情上游 |
 | Cloud Scheduler | 每小時觸發受保護的資料刷新端點 |
-.\scripts\start_local.ps1 -ClientId "你的 OAuth Client ID"
+
 主要入口：`app.py`。`monitor/economy/` 管理 poe.ninja economy；`monitor/tw_pricer/` 管理台服資料集；`monitor/stash/` 管理私人倉庫領域。Jinja 頁面位於 `templates/`。
 
 ## 功能
@@ -118,7 +118,7 @@ web/
 	Dockerfile, requirements*.txt, .env*  runtime/build configuration
 ```
 
-完整目錄責任與資料契約見根目錄 `PROJECT_RULES.md`。
+完整架構圖與目錄設計理由見根目錄 [`ARCHITECTURE.md`](../ARCHITECTURE.md)；核心規則與目錄查找分別見 [`PROJECT_RULES.md`](../PROJECT_RULES.md) 和 [`REPOSITORY_MAP.md`](../REPOSITORY_MAP.md)。
 
 ## 快速開始
 
@@ -193,6 +193,7 @@ python scripts/refresh_tw_currency.py --trade-metadata-only
 ## 文件索引
 
 - 核心規範：[`../PROJECT_RULES.md`](../PROJECT_RULES.md)
+- 架構圖、目錄分層理由與跨專案範本：[`../ARCHITECTURE.md`](../ARCHITECTURE.md)
 - 目錄責任與功能查找：[`../REPOSITORY_MAP.md`](../REPOSITORY_MAP.md)
 - 功能驗證程序、逐項矩陣與共用報告範本：[`docs/VALIDATION.md`](docs/VALIDATION.md)
 - 個人倉庫統計、官方API限制與安全接入：[`docs/STASH.md`](docs/STASH.md)
@@ -214,3 +215,4 @@ python scripts/refresh_tw_currency.py --trade-metadata-only
 | 1.4.1 | 2026-10-06 | 倉庫模組歸類與目錄索引，連結帳號恢復官方OAuth導航並補原頁錯誤返回驗證。 |
 | 1.5.0 | 2026-10-06 | 行情與 economy 模組依領域歸包；測試分 unit／integration，更新引用及查找索引。 |
 | 1.6.0 | 2026-10-06 | 將操作腳本與專用文件分別歸入 scripts/、docs/，更新 CI、操作命令及文件連結。 |
+| 1.7.0 | 2026-10-06 | 新增根目錄架構圖與可重用專案骨架，從 README 提供架構入口。 |
