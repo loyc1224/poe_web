@@ -1,0 +1,95 @@
+name: Deploy Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/cloud-run-deploy-request.json]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poe-web-cloud-run-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: udata-gcp-1
+  REGION: asia-east1
+  SERVICE: poe-python-web
+  IMAGE_REPOSITORY: asia-east1-docker.pkg.dev/udata-gcp-1/poe-web-deploy/poe-python-web
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment request
+        if: github.event_name == 'push'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          request = json.loads(Path('.github/cloud-run-deploy-request.json').read_text())
+          assert request.get('target') == 'udata-gcp-1/asia-east1/poe-python-web'
+          assert isinstance(request.get('request_id'), str) and request['request_id'].strip()
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: web/requirements.txt
+      - run: pip install -r web/requirements.txt
+      - name: Run contract tests
+        working-directory: web
+        run: python -m unittest discover -s tests -v
+      - name: Build and smoke test deployment image
+        run: |
+          set -euo pipefail
+          docker build -t poe-web-validation ./web
+          docker run -d --name poe-web-validation -p 8080:8080 poe-web-validation
+          trap 'docker logs poe-web-validation; docker rm -f poe-web-validation' EXIT
+          curl --fail --silent --show-error --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/health
+          docker save poe-web-validation -o "$RUNNER_TEMP/poe-web-image.tar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-image
+          path: ${{ runner.temp }}/poe-web-image.tar
+          retention-days: 1
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-image
+          path: ${{ runner.temp }}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/446879032144/locations/global/workloadIdentityPools/github-actions/providers/poe-web
+          service_account: poe-web-github-deploy@udata-gcp-1.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Publish tested image
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker load -i "$RUNNER_TEMP/poe-web-image.tar"
+          docker tag poe-web-validation "$IMAGE_REPOSITORY:$GITHUB_SHA"
+          docker push "$IMAGE_REPOSITORY:$GITHUB_SHA"
+      - name: Deploy and verify Cloud Run
+        run: |
+          set -euo pipefail
+          gcloud run deploy "$SERVICE" --image "$IMAGE_REPOSITORY:$GITHUB_SHA" \
+            --project "$PROJECT_ID" --region "$REGION" --port 8080 --quiet
+          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" \
+            --region "$REGION" --format='value(status.url)')
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 "$url/health"
+          printf 'Deployed `%s` to %s\n' "$GITHUB_SHA" "$url" >> "$GITHUB_STEP_SUMMARY"

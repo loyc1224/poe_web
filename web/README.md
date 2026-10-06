@@ -141,7 +141,31 @@ python -m unittest discover -s tests -v
 .\setup_tw_currency_scheduler.ps1 -BucketName "你的唯一 bucket 名稱" -RuntimeServiceAccount "Cloud Run 服務帳號"
 ```
 
-此設定會修改線上 GCP 資源；依核心規範，須先取得使用者明確 OK 才能執行。部署 Cloud Run 同樣必須先本機驗證並取得明確 OK。
+此設定會修改線上 GCP 資源；依核心規範，須先取得使用者明確 OK 才能執行。部署 Cloud Run 必須先在執行環境驗證；當次明確要求「部署／佈署到 Cloud Run」即視為該次 OK，不需重複確認。
+
+### 手機 GitHub Copilot 部署
+
+專案指示位於 [`../.github/copilot-instructions.md`](../.github/copilot-instructions.md)。在手機要求「部署到 Cloud Run」時，Copilot 建立或更新 `.github/cloud-run-deploy-request.json`，並將部署請求與程式變更放在同一 PR。你核准並合併至 `main` 後，[部署工作流程](../.github/workflows/deploy-cloud-run.yml) 才會上線；GitHub 要求的人工核准不能靠對話授權省略。
+
+- 沒有部署請求的普通 push／PR 不觸發部署。也可在 GitHub Actions 選擇 **Deploy Cloud Run → Run workflow → main** 手動部署。
+- 工作流程先執行契約測試，再建置 Docker 映像並檢查 `/health`。只有通過驗證的同一映像才會發布與部署；失敗時不進入部署階段。
+- 部署使用 GitHub OIDC 與 Google Cloud Workload Identity Federation，不使用長效金鑰、不沿用電腦上的 `gcloud` 登入。
+- Google Cloud 信任限定本倉庫的 `main` 分支及指定部署工作流程；部署帳號僅能發布專用映像、更新既有服務並使用既有 runtime 身分。保留既有服務環境變數、Secret 與公開存取設定，不修改排程。
+- 若授權尚未設定、Actions 尚未啟用或核准未完成，流程不能部署。成功後以 Actions 摘要的 commit、Cloud Run URL 與 `/health` 驗證結果為準；部署後健康檢查失敗不會自動回復舊 revision。
+- 工作流程與 Copilot 指示必須先提交並推送到 GitHub 才會生效；本機檔案修改本身不會改變手機端行為。
+
+2026-10-06 已設定的 Google Cloud 授權資源：
+
+| 資源 | 設定 |
+|---|---|
+| OIDC provider | `projects/446879032144/locations/global/workloadIdentityPools/github-actions/providers/poe-web` |
+| 信任條件 | `loyc1224/poe_web`、`refs/heads/main`、`.github/workflows/deploy-cloud-run.yml@refs/heads/main` |
+| 部署帳號 | `poe-web-github-deploy@udata-gcp-1.iam.gserviceaccount.com` |
+| 映像儲存庫 | `asia-east1-docker.pkg.dev/udata-gcp-1/poe-web-deploy`；僅此儲存庫的 `roles/artifactregistry.writer` |
+| 服務權限 | 僅 `poe-python-web` 的 `roles/run.developer` |
+| Runtime 使用權限 | 僅既有 `446879032144-compute@developer.gserviceaccount.com` 的 `roles/iam.serviceAccountUser` |
+
+授權不需要新增 GitHub secret。第一次 GitHub 執行仍須驗證 OIDC 交換、映像發布與部署結果；設定授權不等於已完成端到端部署驗證。
 
 ## 文件索引
 
@@ -156,3 +180,4 @@ python -m unittest discover -s tests -v
 |---|---|---|
 | 1.2.0 | 2026-10-05 | 新增寶石與野獸 JSON 分類、放大側欄圖示、每筆台服交易搜尋連結，並擴充更新器與契約測試。 |
 | 1.3.0 | 2026-10-05 | 移除開季監控頁／API 及 POE1／POE2 快速交易面板，保留物價與倉庫查價流程。 |
+| 1.3.1 | 2026-10-06 | 明確部署指令視為當次 OK，新增手機 Copilot 部署請求與無金鑰 GitHub Actions 部署流程。 |
