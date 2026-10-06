@@ -7,6 +7,7 @@ import hashlib
 import time
 import os
 import base64
+from contextlib import closing
 from datetime import date
 from urllib.parse import urlencode, quote_plus
 
@@ -26,7 +27,7 @@ from monitor import (
 )
 from monitor.config import POE2_LEAGUES, POE1_STANDARD
 from monitor.translations import ITEM_ZH
-from monitor.tw_pricer_client import load_tw_price_dataset
+from monitor.tw_pricer_client import load_tw_price_dataset, load_tw_price_navigation_icons
 from monitor.tw_pricer_source import refresh_all_tw_prices
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -97,14 +98,23 @@ def load_games(include_strategies: bool = True) -> list[dict[str, object]]:
     games: list[dict[str, object]] = []
     for game_dir in sorted(path for path in CONTENT_DIR.iterdir() if path.is_dir()):
         categories: list[dict[str, object]] = []
-        for category_dir in sorted(path for path in game_dir.iterdir() if path.is_dir()):
+        category_dirs = {
+            path.name: path for path in game_dir.iterdir()
+            if path.is_dir() and path.name not in ("beetle", "filter", "fliter")
+        }
+        if (game_dir / "beetle").is_dir():
+            category_dirs.setdefault("strategy", game_dir / "strategy")
+        for category_name in sorted(category_dirs):
+            category_dir = category_dirs[category_name]
             documents: list[dict[str, str]] = []
             markdown_files = sorted(category_dir.glob("*.md"))
+            beetle_files = sorted((game_dir / "beetle").glob("*.md")) if category_name == "strategy" else []
+            markdown_files.extend(beetle_files)
             locked = category_dir.name == "strategy" and not include_strategies
             for file_path in ([] if locked else markdown_files):
                 text = file_path.read_text(encoding="utf-8")
                 title = get_doc_title(text, file_path.stem)
-                doc_id = f"{game_dir.name}-{category_dir.name}-{file_path.stem}"
+                doc_id = f"{game_dir.name}-{file_path.parent.name}-{file_path.stem}"
                 documents.append(
                     {
                         "id": doc_id,
@@ -112,6 +122,7 @@ def load_games(include_strategies: bool = True) -> list[dict[str, object]]:
                         "filename": file_path.name,
                         "game": game_dir.name,
                         "category": category_dir.name,
+                        "subcategory": "beetle" if file_path.parent.name == "beetle" else "",
                         "summary": build_summary(text),
                         "html": render_markdown(text),
                     }
@@ -126,6 +137,7 @@ def load_games(include_strategies: bool = True) -> list[dict[str, object]]:
                     "count": len(markdown_files),
                     "locked": locked,
                     "documents": documents,
+                    "subcategories": [{"id": "beetle", "label": CATEGORY_LABELS["beetle"], "count": len(beetle_files)}] if beetle_files else [],
                 }
             )
 
@@ -162,7 +174,7 @@ def load_shop_filters() -> dict:
 
 def _ensure_traffic_db() -> None:
     TRAFFIC_DB.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(TRAFFIC_DB) as conn:
+    with closing(sqlite3.connect(TRAFFIC_DB)) as conn, conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS traffic_stats (
@@ -185,7 +197,7 @@ def _ensure_traffic_db() -> None:
 
 def _ensure_stash_db() -> None:
     STASH_DB.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(STASH_DB) as conn:
+    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS stash_snapshots (
@@ -250,7 +262,7 @@ def _save_pkce_state(state: str, code_verifier: str) -> None:
     _ensure_stash_db()
     cutoff = time.time() - (OAUTH_STATE_TTL_SECONDS * 2)
     with _stash_lock:
-        with sqlite3.connect(STASH_DB) as conn:
+        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
             conn.execute(
                 "INSERT OR REPLACE INTO oauth_pkce_states (state, code_verifier, created_at) VALUES (?, ?, ?)",
                 (state, code_verifier, time.time()),
@@ -280,7 +292,7 @@ def _validate_oauth_config() -> str | None:
 def _pop_pkce_verifier(state: str) -> str | None:
     _ensure_stash_db()
     with _stash_lock:
-        with sqlite3.connect(STASH_DB) as conn:
+        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
             row = conn.execute(
                 "SELECT code_verifier, created_at FROM oauth_pkce_states WHERE state = ?",
                 (state,),
@@ -299,7 +311,7 @@ def _save_tokens(token_payload: dict) -> None:
     expires_in = int(token_payload.get("expires_in") or 0)
     expires_at = time.time() + max(expires_in, 0)
     with _stash_lock:
-        with sqlite3.connect(STASH_DB) as conn:
+        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO oauth_tokens (id, access_token, refresh_token, expires_at, token_type)
@@ -322,13 +334,13 @@ def _save_tokens(token_payload: dict) -> None:
 def _clear_tokens() -> None:
     _ensure_stash_db()
     with _stash_lock:
-        with sqlite3.connect(STASH_DB) as conn:
+        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
             conn.execute("DELETE FROM oauth_tokens WHERE id = 1")
 
 
 def _load_tokens() -> dict | None:
     _ensure_stash_db()
-    with sqlite3.connect(STASH_DB) as conn:
+    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
         row = conn.execute(
             "SELECT access_token, refresh_token, expires_at, token_type FROM oauth_tokens WHERE id = 1"
         ).fetchone()
@@ -439,7 +451,7 @@ def _save_stash_state(
     included_tabs = sum(1 for t in tabs if t.get("enabled", True))
 
     with _stash_lock:
-        with sqlite3.connect(STASH_DB) as conn:
+        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO stash_state (id, account_name, game, league, tabs_json, raw_json, updated_at)
@@ -524,7 +536,7 @@ def _sync_stash_with_token(access_token: str, game: str, league: str) -> dict:
 
 def _read_stash_state() -> dict | None:
     _ensure_stash_db()
-    with sqlite3.connect(STASH_DB) as conn:
+    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
         row = conn.execute(
             "SELECT account_name, game, league, tabs_json, updated_at FROM stash_state WHERE id = 1"
         ).fetchone()
@@ -546,7 +558,7 @@ def _read_stash_state() -> dict | None:
 
 def _read_stash_raw_payload() -> object | None:
     _ensure_stash_db()
-    with sqlite3.connect(STASH_DB) as conn:
+    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
         row = conn.execute("SELECT raw_json FROM stash_state WHERE id = 1").fetchone()
     if not row:
         return None
@@ -710,7 +722,7 @@ def record_home_visit(req) -> dict:
     visitor_hash = hashlib.sha256(f"{ip}|{ua}".encode("utf-8")).hexdigest()
 
     with _traffic_lock:
-        with sqlite3.connect(TRAFFIC_DB) as conn:
+        with closing(sqlite3.connect(TRAFFIC_DB)) as conn, conn:
             conn.execute("UPDATE traffic_stats SET total_views = total_views + 1 WHERE id = 1")
             conn.execute(
                 "INSERT OR IGNORE INTO traffic_daily_uniques (day, visitor_hash) VALUES (?, ?)",
@@ -735,7 +747,7 @@ def get_traffic_stats() -> dict:
     """取得流量統計（不增加計數）。"""
     _ensure_traffic_db()
     today = date.today().isoformat()
-    with sqlite3.connect(TRAFFIC_DB) as conn:
+    with closing(sqlite3.connect(TRAFFIC_DB)) as conn, conn:
         total_views = conn.execute(
             "SELECT total_views FROM traffic_stats WHERE id = 1"
         ).fetchone()[0]
@@ -763,6 +775,7 @@ def home():
         traffic_stats=traffic_stats,
         strategy_unlocked=strategy_unlocked,
         strategy_password_configured=bool(STRATEGY_PASSWORD),
+        price_navigation_icons=load_tw_price_navigation_icons(),
     )
 
 
@@ -788,9 +801,11 @@ def unlock_strategy():
         if attempts >= 5:
             return {"status": "error", "message": "嘗試次數過多，請 15 分鐘後再試"}, 429
 
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return {"status": "error", "message": "請提供 JSON 物件"}, 400
     password = payload.get("password")
-    if not isinstance(password, str) or not password.isascii() or not secrets.compare_digest(password, STRATEGY_PASSWORD):
+    if not isinstance(password, str) or not secrets.compare_digest(password.encode("utf-8"), STRATEGY_PASSWORD.encode("utf-8")):
         with _strategy_login_lock:
             attempts, started_at = _strategy_login_attempts.get(ip_address, (0, now))
             if now - started_at >= 900:
@@ -813,6 +828,16 @@ def lock_strategy():
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.route("/health/ready")
+def readiness():
+    checks = {
+        "strategy_password": bool(STRATEGY_PASSWORD),
+        "session_secret": bool(os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY")),
+    }
+    ready = all(checks.values())
+    return {"status": "ok" if ready else "unavailable", "checks": checks}, 200 if ready else 503
 
 
 @app.route("/pricer")

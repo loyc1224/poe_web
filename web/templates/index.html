@@ -238,6 +238,8 @@
     .price-category-icon { width: 28px; height: 28px; flex: 0 0 28px; object-fit: contain; }
     .price-category-icon-blank { width: 28px; height: 28px; flex: 0 0 28px; }
     .price-kind-source-icon { width: 30px; height: 30px; flex: 0 0 30px; object-fit: contain; }
+    .price-kind-source-icon[hidden] { display: none; }
+    .strategy-subcategories { margin-left: 20px; padding-left: 8px; border-left: 1px solid var(--line); }
     /* ── LIST PANEL ─────────────────────────── */
     .list-panel {
       padding: 20px 16px;
@@ -628,6 +630,10 @@
 
     <div class="layout">
       <aside class="sidebar">
+        {% macro navigation_icon(key, attribute, identifier, label) -%}
+          {% set icon = price_navigation_icons.get(key, '') %}
+          <img class="price-kind-source-icon" {{ attribute }}="{{ identifier }}" {% if icon %}src="{{ icon }}" alt="{{ label }}" title="{{ label }}"{% else %}alt="" hidden{% endif %} loading="eager">
+        {%- endmacro %}
         {% if games %}
           {% set cat_icons = {'strategy': '🗺️', 'crafting': '⚒️', 'beetle': '🪲', 'builds': '🌪️'} %}
           {% for game in games %}
@@ -644,6 +650,16 @@
                 <span class="category-count">{% if category.locked %}🔒{% else %}{{ category.count }}{% endif %}</span>
               </span>
             </button>
+            {% if category.subcategories %}
+            <div class="strategy-subcategories">
+              {% for subcategory in category.subcategories %}
+              <button class="category-button {{ game.id }}-cat" type="button" data-strategy-parent="{{ category.id }}" data-strategy-subcategory="{{ subcategory.id }}" data-strategy-locked="{{ 'true' if category.locked else 'false' }}">
+                <span class="cat-icon">{{ cat_icons.get(subcategory.id, '📌') }}</span>
+                <span class="category-label-row"><span class="category-name">{{ subcategory.label }}</span><span class="category-count">{% if category.locked %}🔒{% else %}{{ subcategory.count }}{% endif %}</span></span>
+              </button>
+              {% endfor %}
+            </div>
+            {% endif %}
             {% endfor %}
             {% if game.id == 'poe1' %}
             <button class="category-button poe1-cat" type="button" data-category-target="poe1-tools">
@@ -662,19 +678,19 @@
             </button>
             <div class="price-nav-group" data-price-nav-group="poe2">
               <button class="price-nav-toggle poe2-price" type="button" data-price-nav-toggle="poe2" aria-expanded="true" aria-controls="poe2-price-children">
-                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-nav-icon="poe2" alt="" loading="lazy"><span class="category-name">物價</span>
+                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe2', 'data-price-nav-icon', 'poe2', '物價') }}<span class="category-name">物價</span>
               </button>
               <div class="price-nav-children" id="poe2-price-children" data-price-nav-children="poe2">
                 <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-currency" data-game="poe2" data-price-kind="currency" aria-expanded="false" aria-controls="poe2-currency-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-currency" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">通貨</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe2-currency', 'data-price-kind-icon', 'poe2-currency', '通貨') }}<span class="category-label-row"><span class="category-name">通貨</span></span>
                 </button>
                 <div class="price-category-list" id="poe2-currency-categories" data-price-category-list="poe2-currency" hidden></div>
                 <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-unique" data-game="poe2" data-price-kind="unique" aria-expanded="false" aria-controls="poe2-unique-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-unique" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">傳奇</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe2-unique', 'data-price-kind-icon', 'poe2-unique', '傳奇') }}<span class="category-label-row"><span class="category-name">傳奇</span></span>
                 </button>
                 <div class="price-category-list" id="poe2-unique-categories" data-price-category-list="poe2-unique" hidden></div>
                 <button class="category-button poe2-cat price-kind-toggle" type="button" data-category-target="poe2-tw-gem" data-game="poe2" data-price-kind="gem" aria-expanded="false" aria-controls="poe2-gem-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe2-gem" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">寶石</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe2-gem', 'data-price-kind-icon', 'poe2-gem', '寶石') }}<span class="category-label-row"><span class="category-name">寶石</span></span>
                 </button>
                 <div class="price-category-list" id="poe2-gem-categories" data-price-category-list="poe2-gem" hidden></div>
               </div>
@@ -683,23 +699,23 @@
             {% if game.id == 'poe1' %}
             <div class="price-nav-group" data-price-nav-group="poe1">
               <button class="price-nav-toggle poe1-price" type="button" data-price-nav-toggle="poe1" aria-expanded="true" aria-controls="poe1-price-children">
-                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-nav-icon="poe1" alt="" loading="lazy"><span class="category-name">物價</span>
+                <span class="price-nav-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe1', 'data-price-nav-icon', 'poe1', '物價') }}<span class="category-name">物價</span>
               </button>
               <div class="price-nav-children" id="poe1-price-children" data-price-nav-children="poe1">
                 <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-currency" data-game="poe1" data-price-kind="currency" aria-expanded="false" aria-controls="poe1-currency-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-currency" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">通貨</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe1-currency', 'data-price-kind-icon', 'poe1-currency', '通貨') }}<span class="category-label-row"><span class="category-name">通貨</span></span>
                 </button>
                 <div class="price-category-list" id="poe1-currency-categories" data-price-category-list="poe1-currency" hidden></div>
                 <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-unique" data-game="poe1" data-price-kind="unique" aria-expanded="false" aria-controls="poe1-unique-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-unique" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">傳奇</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe1-unique', 'data-price-kind-icon', 'poe1-unique', '傳奇') }}<span class="category-label-row"><span class="category-name">傳奇</span></span>
                 </button>
                 <div class="price-category-list" id="poe1-unique-categories" data-price-category-list="poe1-unique" hidden></div>
                 <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-gem" data-game="poe1" data-price-kind="gem" aria-expanded="false" aria-controls="poe1-gem-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-gem" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">寶石</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe1-gem', 'data-price-kind-icon', 'poe1-gem', '寶石') }}<span class="category-label-row"><span class="category-name">寶石</span></span>
                 </button>
                 <div class="price-category-list" id="poe1-gem-categories" data-price-category-list="poe1-gem" hidden></div>
                 <button class="category-button poe1-cat price-kind-toggle" type="button" data-category-target="poe1-tw-beast" data-game="poe1" data-price-kind="beast" aria-expanded="false" aria-controls="poe1-beast-categories">
-                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span><img class="price-kind-source-icon" data-price-kind-icon="poe1-beast" alt="" loading="lazy"><span class="category-label-row"><span class="category-name">野獸</span></span>
+                  <span class="price-kind-chevron" aria-hidden="true">&#9656;</span>{{ navigation_icon('poe1-beast', 'data-price-kind-icon', 'poe1-beast', '野獸') }}<span class="category-label-row"><span class="category-name">野獸</span></span>
                 </button>
                 <div class="price-category-list" id="poe1-beast-categories" data-price-category-list="poe1-beast" hidden></div>
               </div>
@@ -728,7 +744,7 @@
               {% endif %}
               <div class="card-list">
                 {% for doc in category.documents %}
-                <button class="doc-card {{ game.id }}-card" type="button" data-doc-target="{{ doc.id }}" data-doc-category="{{ category.id }}">
+                <button class="doc-card {{ game.id }}-card" type="button" data-doc-target="{{ doc.id }}" data-doc-category="{{ category.id }}" data-doc-subcategory="{{ doc.subcategory }}">
                   <div class="doc-card-accent"></div>
                   <div class="doc-card-body">
                     <h3>{{ doc.title }}</h3>
@@ -1059,7 +1075,7 @@
   </script>
 
   <script>
-    const categoryButtons = document.querySelectorAll('.category-button');
+    const categoryButtons = document.querySelectorAll('.category-button[data-category-target]');
     const categoryPanels = document.querySelectorAll('.category-panel');
     const docButtons = document.querySelectorAll('.doc-card');
     const docPanels = document.querySelectorAll('.doc-panel');
@@ -1069,9 +1085,11 @@
     const strategyError = document.getElementById('strategyError');
     const strategySubmit = document.getElementById('strategySubmit');
     let pendingStrategyCategory = '';
+    let pendingStrategySubcategory = '';
 
-    function openStrategyUnlock(categoryId) {
+    function openStrategyUnlock(categoryId, subcategory = '') {
       pendingStrategyCategory = categoryId;
+      pendingStrategySubcategory = subcategory;
       strategyError.textContent = '';
       strategyPassword.value = '';
       const passwordConfigured = {{ strategy_password_configured|tojson }};
@@ -1102,6 +1120,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.message || '解鎖失敗');
         localStorage.setItem('poe-active-category', pendingStrategyCategory);
+        localStorage.setItem('poe-active-strategy-subcategory', pendingStrategySubcategory);
         localStorage.removeItem('poe-active-doc');
         window.location.reload();
       } catch (error) {
@@ -1161,6 +1180,10 @@
       docButtons.forEach((button) => {
         button.classList.toggle('active', button.dataset.docTarget === docId);
       });
+      document.querySelectorAll('[data-strategy-subcategory]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.strategyParent === targetButton.dataset.docCategory
+          && button.dataset.strategySubcategory === targetButton.dataset.docSubcategory);
+      });
 
       docPanels.forEach((panel) => {
         panel.classList.toggle('active', panel.dataset.docPanel === docId);
@@ -1187,19 +1210,40 @@
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     }
 
-    function createTaiwanTradeLink(item, league) {
+    function createTaiwanTradeLink(item, league, game, kind) {
       const itemName = item.zhName || item.name || item.enName || item.code || '';
       if (!itemName || !league) return '<span class="tw-currency-code">無查價連結</span>';
+      const identity = item.trade_identity;
+      if (!identity?.type) return '<span class="tw-currency-code">名稱無法精確對照</span>';
       const query = {
         query: {
           status: { option: 'available' },
-          type: String(itemName).trim(),
+          type: identity.discriminator
+            ? { option: identity.type, discriminator: identity.discriminator }
+            : identity.type,
           stats: [{ type: 'and', filters: [] }],
         },
         sort: { price: 'asc' },
       };
-      const url = `https://pathofexile.tw/trade/search/${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`;
-      return `<a class="tw-trade-link" href="${escapeCurrencyText(url)}" target="_blank" rel="noopener noreferrer">查價 ↗</a>`;
+      if (identity.name) query.query.name = identity.name;
+      if (kind === 'unique') {
+        query.query.filters = {
+          type_filters: { filters: { rarity: { option: 'unique' } } },
+          misc_filters: { filters: { identified: { option: 'true' } } },
+        };
+      }
+      if (kind === 'gem') {
+        const filters = {};
+        for (const [field, value] of [['gem_level', item.level], ['quality', item.quality]]) {
+          if (typeof value === 'number' && Number.isFinite(value)) filters[field] = { min: value, max: value };
+        }
+        if (typeof item.isCorrupted === 'boolean') filters.corrupted = { option: String(item.isCorrupted) };
+        query.query.filters = { misc_filters: { filters } };
+      }
+      const tradePath = game === 'poe2' ? '/trade2/search/poe2/' : '/trade/search/';
+      const url = `https://pathofexile.tw${tradePath}${encodeURIComponent(league)}?q=${encodeURIComponent(JSON.stringify(query))}`;
+      const itemId = item.id ?? item.code ?? item.key ?? itemName;
+      return `<a class="tw-trade-link" data-trade-item-id="${escapeCurrencyText(itemId)}" href="${escapeCurrencyText(url)}" target="_blank" rel="noopener noreferrer">查價 ↗</a>`;
     }
 
     function renderTwPricePanel(panel) {
@@ -1215,10 +1259,11 @@
       });
       const priceForSort = (item) => {
         if (kind === 'beast') return Number(item.medianChaos || 0);
+        if (!item.price || item.priceStatus === 'unavailable') return -Infinity;
         if (kind === 'currency') {
           return Number(game === 'poe1' ? item.price?.chaosPer1 ?? item.price?.buy : item.price?.divinePer1 ?? 0) || 0;
         }
-        return Number(item.price?.chaosEquivalent ?? item.medianChaos ?? item.price?.amount ?? 0) || 0;
+        return Number(item.price?.chaosEquivalent ?? item.price?.amount ?? 0) || 0;
       };
       items.sort((a, b) => sortKey === 'name'
         ? (a.name || a.zhName || '').localeCompare(b.name || b.zhName || '', 'zh-Hant')
@@ -1234,16 +1279,17 @@
         const price = item.price || {};
         const useDivine = isBeast && Number(item.medianDivine) >= 1;
         const unitId = isBeast ? (useDivine ? 'divine' : 'chaos') : price.unit;
-        const rawAmount = isBeast ? (useDivine ? item.medianDivine : item.medianChaos) : price.amount ?? price.buy ?? item.medianChaos;
+        const rawAmount = isBeast ? (useDivine ? item.medianDivine : item.medianChaos)
+          : item.priceStatus === 'unavailable' ? null : price.amount ?? price.buy;
         const amount = rawAmount == null || !Number.isFinite(Number(rawAmount)) ? null : Number(rawAmount);
         const unit = twCurrencyUnits[unitId] || unitId || '';
         const itemName = item.zhName || item.name || item.enName || item.code || '物品';
         const targetIcon = priceIcon(item.image || item.imageUrl, itemName);
         const baseIcon = priceIcon(panel._unitIcons?.[unitId], unit);
         const exchange = amount == null
-          ? '<span class="tw-price-empty">—</span>'
-          : `<div class="tw-price-ratio"><span>${amount.toLocaleString('zh-Hant', { maximumFractionDigits: kind === 'currency' ? 3 : 2 })}</span>${baseIcon}<span class="tw-price-arrow">→</span><span>1</span>${targetIcon}</div>`;
-        const tradeLink = createTaiwanTradeLink(item, panel._priceLeague);
+          ? '<span class="tw-price-empty">暫無有效行情</span>'
+          : `<div class="tw-price-ratio"><span>${amount.toLocaleString('zh-Hant', { maximumFractionDigits: kind === 'currency' ? 3 : 2 })}</span>${baseIcon}<span class="tw-price-unit">${escapeCurrencyText(unit || '單位未知')}</span><span class="tw-price-arrow">→</span><span>1</span>${targetIcon}</div>`;
+        const tradeLink = createTaiwanTradeLink(item, panel._priceLeague, game, kind);
         const categoryId = item.category_id || item.category || item.beastType || '';
         const categoryLabel = panel._priceCategories?.find((category) => category.id === categoryId)?.label
           || uniqueCategoryFallbacks[categoryId]
@@ -1309,12 +1355,15 @@
       ]) {
         const image = document.querySelector(selector);
         if (!image) continue;
+        if (selector.includes('data-price-nav-icon')) continue;
         if (iconSource) {
           image.src = iconSource[1];
+          image.hidden = false;
           image.alt = label;
           image.title = label;
         } else {
           image.removeAttribute('src');
+          image.hidden = true;
           image.alt = '';
           image.removeAttribute('title');
         }
@@ -1451,6 +1500,19 @@
       });
     });
 
+    document.querySelectorAll('[data-strategy-subcategory]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const category = button.dataset.strategyParent;
+        const subcategory = button.dataset.strategySubcategory;
+        if (button.dataset.strategyLocked === 'true') {
+          openStrategyUnlock(category, subcategory);
+          return;
+        }
+        const documentButton = document.querySelector(`.doc-card[data-doc-category="${category}"][data-doc-subcategory="${subcategory}"]`);
+        if (documentButton) activateDocument(documentButton.dataset.docTarget);
+      });
+    });
+
     categoryButtons.forEach((button) => {
       button.addEventListener('click', () => {
         if (button.dataset.priceKind) return;
@@ -1480,8 +1542,23 @@
     } else if (categoryButtons.length > 0) {
       activateCategory(categoryButtons[0].dataset.categoryTarget);
     }
+    const requestedSubcategory = localStorage.getItem('poe-active-strategy-subcategory');
+    if (requestedSubcategory && savedCategory) {
+      const documentButton = document.querySelector(`.doc-card[data-doc-category="${savedCategory}"][data-doc-subcategory="${requestedSubcategory}"]`);
+      if (documentButton) activateDocument(documentButton.dataset.docTarget);
+      localStorage.removeItem('poe-active-strategy-subcategory');
+    }
 
     // ── SHOP FILTER TOOL ─────────────────────
+    async function copyFilterText(text, notify, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        notify(successMessage);
+      } catch {
+        notify('無法存取剪貼簿');
+      }
+    }
+
     (function () {
       const filterDisplay = document.getElementById('filterDisplay');
       const copyFilterBtn = document.getElementById('copyFilterBtn');
@@ -1532,7 +1609,7 @@
 
         chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
           e.stopPropagation();
-          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+          copyFilterText(kw, showToast, '已複製：' + kw);
         });
       });
 
@@ -1544,7 +1621,7 @@
 
       copyFilterBtn.addEventListener('click', () => {
         if (activeKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
-        navigator.clipboard.writeText(activeKws.join('|')).then(() => showToast('篩選字串已複製！'));
+        copyFilterText(activeKws.join('|'), showToast, '篩選字串已複製！');
       });
 
       clearFilterBtn.addEventListener('click', () => {
@@ -1605,13 +1682,13 @@
         });
         chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
           e.stopPropagation();
-          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+          copyFilterText(kw, showToast, '已複製：' + kw);
         });
       });
 
       copyBtn.addEventListener('click', () => {
         if (activeWsKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
-        navigator.clipboard.writeText(activeWsKws.join('|')).then(() => showToast('換界石篩選已複製！'));
+        copyFilterText(activeWsKws.join('|'), showToast, '換界石篩選已複製！');
       });
 
       clearBtn.addEventListener('click', () => {
@@ -1681,13 +1758,13 @@
         });
         chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
           e.stopPropagation();
-          navigator.clipboard.writeText(kw).then(() => showToast('已複製：' + kw));
+          copyFilterText(kw, showToast, '已複製：' + kw);
         });
       });
 
       copyBtn.addEventListener('click', () => {
         if (activeKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
-        navigator.clipboard.writeText(activeKws.join('|')).then(() => showToast('PoE1 篩選字串已複製！'));
+        copyFilterText(activeKws.join('|'), showToast, 'PoE1 篩選字串已複製！');
       });
 
       clearBtn.addEventListener('click', () => {

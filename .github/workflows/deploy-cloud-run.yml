@@ -43,17 +43,34 @@ jobs:
           cache: pip
           cache-dependency-path: web/requirements.txt
       - run: pip install -r web/requirements.txt
+      - run: pip install -r web/requirements-validation.txt
+      - run: python -m playwright install --with-deps chromium
       - name: Run contract tests
         working-directory: web
         run: python -m unittest discover -s tests -v
       - name: Build and smoke test deployment image
+        env:
+          STRATEGY_PASSWORD: ci-validation-only-password
+          FLASK_SECRET_KEY: ci-validation-only-session-key
         run: |
           set -euo pipefail
           docker build -t poe-web-validation ./web
-          docker run -d --name poe-web-validation -p 8080:8080 poe-web-validation
+          docker run -d --name poe-web-validation -p 8080:8080 \
+            -e STRATEGY_PASSWORD -e FLASK_SECRET_KEY poe-web-validation
           trap 'docker logs poe-web-validation; docker rm -f poe-web-validation' EXIT
           curl --fail --silent --show-error --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/health
+          curl --fail --silent --show-error http://127.0.0.1:8080/health/ready
+          python web/validate_site.py --base-url http://127.0.0.1:8080 \
+            --report "$RUNNER_TEMP/site-validation.json" --artifacts-dir "$RUNNER_TEMP/site-screenshots"
           docker save poe-web-validation -o "$RUNNER_TEMP/poe-web-image.tar"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: site-validation
+          path: |
+            ${{ runner.temp }}/site-validation.json
+            ${{ runner.temp }}/site-screenshots
+          retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
           name: validated-image
@@ -77,6 +94,11 @@ jobs:
           workload_identity_provider: projects/446879032144/locations/global/workloadIdentityPools/github-actions/providers/poe-web
           service_account: poe-web-github-deploy@udata-gcp-1.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
+      - name: Verify required production configuration
+        run: |
+          set -euo pipefail
+          gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json | \
+            python -c 'import json,sys; data=json.load(sys.stdin); env={entry["name"]: entry for entry in data["spec"]["template"]["spec"]["containers"][0].get("env", [])}; configured=lambda name: bool(env.get(name, {}).get("value") or env.get(name, {}).get("valueFrom", {}).get("secretKeyRef")); assert configured("STRATEGY_PASSWORD"), "Missing production strategy password"; assert configured("FLASK_SECRET_KEY") or configured("SECRET_KEY"), "Missing stable production session secret"'
       - name: Publish tested image
         run: |
           set -euo pipefail
@@ -92,4 +114,5 @@ jobs:
           url=$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" \
             --region "$REGION" --format='value(status.url)')
           curl --fail --silent --show-error --retry 5 --retry-delay 2 "$url/health"
+          curl --fail --silent --show-error "$url/health/ready"
           printf 'Deployed `%s` to %s\n' "$GITHUB_SHA" "$url" >> "$GITHUB_STEP_SUMMARY"

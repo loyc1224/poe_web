@@ -1,0 +1,14 @@
+.gcloudignore
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.env.*
+*.pem
+*.key
+gha-creds-*.json
+cache/*.db
+cache/*.db-*

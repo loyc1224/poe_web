@@ -2,6 +2,12 @@
 
 所有變更先閱讀並遵循根目錄 `PROJECT_RULES.md` 與 `AGENTS.md`。
 
+## 功能驗證
+
+- 完成網站變更與部署前後，依 `web/VALIDATION.md` 執行離線測試與 `web/validate_site.py`，檢查各功能、首次載入 icon、圖片解碼、策略解鎖／重整／鎖回、桌機與手機控制項；只測首頁或 `/health` 不算驗收。
+- 新發現的缺陷必須補回歸測試／閘門並更新共用驗證文件與記憶。回報 PASS／FAIL／BLOCKED；沒有真實 OAuth client／授權時不得把 fixture 成功當成登入或倉庫同步成功。
+- 部署必要設定包含策略密碼與固定 session key；缺少時停止部署，機密不得寫入回報、文件或倉庫。
+
 ## Cloud Run 部署授權
 
 - 使用者當次明確要求「部署／佈署到 Cloud Run」，或在 Cloud Run 部署上下文中說「部署／佈署」，就代表該次部署已取得 OK。電腦與手機 GitHub Copilot 都適用，不再要求使用者重複說 OK。

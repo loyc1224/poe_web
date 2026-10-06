@@ -204,11 +204,38 @@ def refresh_tw_prices(game: str) -> dict[str, dict]:
     return results
 
 
+def refresh_trade_metadata(game: str) -> dict:
+    if game not in ("poe1", "poe2"):
+        raise ValueError("game must be poe1 or poe2")
+    endpoint = "trade" if game == "poe1" else "trade2"
+    url = f"https://pathofexile.tw/api/{endpoint}/data/items"
+    response = requests.get(url, headers=_HEADERS, timeout=20)
+    response.raise_for_status()
+    payload = response.json()
+    groups = payload.get("result") if isinstance(payload, dict) else None
+    if not isinstance(groups, list):
+        raise ValueError("Official trade metadata has an invalid schema")
+    items = []
+    categories = []
+    for group in groups:
+        if not isinstance(group, dict) or not group.get("id") or not isinstance(group.get("entries"), list):
+            raise ValueError("Official trade metadata has an invalid group")
+        categories.append({"id": group["id"], "label": group.get("label") or group["id"]})
+        items.extend({**entry, "category_id": group["id"]} for entry in group["entries"] if isinstance(entry, dict) and isinstance(entry.get("type"), str))
+    if not items:
+        raise ValueError("Official trade metadata is empty; preserving the previous dataset")
+    dataset = _dataset(game, "trade", "global", items, categories, {})
+    dataset["source"] = url
+    save_tw_price_dataset(game, "trade", dataset)
+    return dataset
+
+
 def refresh_all_tw_prices() -> dict[str, dict]:
     results = {}
     errors = {}
     for game in ("poe1", "poe2"):
         try:
+            refresh_trade_metadata(game)
             results[game] = refresh_tw_prices(game)
         except Exception as error:
             errors[game] = str(error)
