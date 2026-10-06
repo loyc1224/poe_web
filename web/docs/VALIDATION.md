@@ -88,12 +88,15 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 2026-10-06 | 未先確認官方受理狀態就把註冊client當成可立即完成，後又把國際服公告直接套用台服 | 國際服Getting Started暫停新申請，但台服政策尚未確認；使用者授權紀錄證明既有台服應用存在。需台服官方確認本站核發途徑／回呼／API，不能推論既有應用是最近核發或借用其client |
 | 2026-10-06 | economy／台服行情模組與測試平鋪，新增功能難依責任定位 | 模組歸類至 `monitor/economy/`、`monitor/tw_pricer/`；測試分 `tests/unit/`、`tests/integration/`；全量 unittest discovery 48 PASS、舊路徑搜尋無殘留，桌機／手機各 10 項 PASS |
 | 2026-10-06 | Web根目錄散落部署／更新／驗證腳本與多份操作Markdown | 腳本移至 `scripts/`、專用手冊移至 `docs/`；修正 CI／命令／匯入根路徑；CLI `--help`、PowerShell parser、完整測試與瀏覽器矩陣做提交前驗證 |
+| 2026-10-06 | 架構文件與目錄整理提交後依使用者要求部署 | commit `d784208` 部署至 `poe-python-web-00044-gd4`，Ready／100%流量；48 tests PASS，正式站桌機／手機20 checks PASS，真實 OAuth 各 1 BLOCKED；readiness PASS，未修改排程 |
 
 本機與 Python 3.11 實際部署映像完成：20 項離線測試；桌機／手機共 18 項瀏覽器檢查通過，真實 OAuth／授權倉庫同步各有 1 項 BLOCKED。舊查價頁 UI 使用 fixture。
 
 2026-10-06 正式驗收：`poe-python-web-00042-6qn` Ready、100% 流量，正式 `/health/ready` 回報策略密碼與固定 session key 均已設定。對正式 URL 執行相同程序，18 項核心檢查 PASS；策略成功解鎖、重新整理、鎖回及甲蟲子項都以實際設定驗證，桌機／手機截圖已檢查。真實 OAuth／授權倉庫同步仍為 BLOCKED，不能宣稱全外部功能成功。
 
 正式策略密碼與 session key 透過 `poe-web-strategy-password:1`、`poe-web-session-key:1` 的 Secret Manager 参照注入既有 runtime；值不在文件、版控、映像或 SQLite。映像固定 digest 為 `sha256:314ed37a87bb93c0f095b37d84d8bcafb63e9043091adba5e2716c3df36f152f`；正式驗收 JSON／截圖保存於系統 TEMP 的 `poe-site-validation-production.json`／`poe-site-validation-production/`。此為本機合法 gcloud 身分直接部署，並未驗證 GitHub OIDC 端到端流程，也未合併 PR 或修改排程。
+
+2026-10-06 架構文件與目錄整理 commit `d784208a853c392db5227e8163c746459a6c0e6c` 已部署至 `poe-python-web-00044-gd4`，Ready／100%流量；部署前48項 unittest PASS，正式站 20 項桌機／手機功能檢查 PASS，OAuth真實登入／倉庫同步各 1 項 BLOCKED。正式 `/health/ready` PASS；未建立或修改線上排程。報告位於 TEMP 的 `poe-web-predeploy-validation.json` 與 `poe-web-postdeploy-validation.json`。此部署使用本機 gcloud，不代表 GitHub OIDC 流程已驗證。
 
 ## 共用報告範本
 

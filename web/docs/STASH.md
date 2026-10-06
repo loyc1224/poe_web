@@ -108,7 +108,7 @@ python scripts/validate_site.py --report "$env:TEMP\poe-site-validation-stash.js
 
 先前倉庫功能已通過本機與 Python 3.11／gunicorn 容器的45項離線測試及20項桌機／手機核心檢查。本輪目錄歸類與OAuth導覽補至48項離線回歸，新增官方302／PKCE／scope／Secret不出URL、缺設定與交換失敗回原頁；真實client仍未設定，因此不把fixture跳轉當作實際官方授權成功。目錄責任與查找位置見 [`../../REPOSITORY_MAP.md`](../../REPOSITORY_MAP.md)。
 
-UI 不植入 demo 資產；未連結時總值是 `—`。倉庫功能尚未部署，本次未建立或修改線上排程。測試JSON／截圖在系統 TEMP `poe-site-validation-stash-container.json`／同名目錄。
+UI 不植入 demo 資產；未連結時總值是 `—`。倉庫介面已部署至 `poe-python-web-00044-gd4`；因台服 OAuth client 尚待官方核發，真實授權／同步仍 BLOCKED。本次未建立或修改線上排程。測試JSON／截圖在系統 TEMP `poe-site-validation-stash-container.json`／同名目錄。
 
 ## 變更紀錄
 
@@ -117,3 +117,4 @@ UI 不植入 demo 資產；未連結時總值是 `—`。倉庫功能尚未部�
 | 1.0.0 | 2026-10-06 | 新增左側倉庫統計、資料集估值、分頁／物品選取、快照與加密私有連線，記錄官方PoE1限制及真實授權前提。 |
 | 1.0.1 | 2026-10-06 | 倉庫模組歸類；連結帳號恢復直接官方OAuth流程、診斷用獨立齒輪，補跳轉與錯誤返回回歸。 |
 | 1.0.2 | 2026-10-06 | 記錄台服 OAuth 申請已送出待回覆及倉庫程式／文件目錄整理狀態。 |
+| 1.0.3 | 2026-10-06 | 記錄倉庫介面部署至 `00044-gd4`；真實 OAuth 同步仍 BLOCKED，未修改排程。 |
