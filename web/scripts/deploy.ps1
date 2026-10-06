@@ -11,13 +11,13 @@ Write-Host "Project: $ProjectId"
 Write-Host "Region : $Region"
 Write-Host "Service: $ServiceName"
 
-Set-Location $PSScriptRoot
+Set-Location (Split-Path -Parent $PSScriptRoot)
 
 python -m unittest discover -s tests -v
 if ($LASTEXITCODE -ne 0) { throw "Site tests failed; deployment stopped." }
 
 $validationReport = Join-Path $env:TEMP "poe-web-predeploy-validation.json"
-python validate_site.py --report $validationReport
+python scripts/validate_site.py --report $validationReport
 if ($LASTEXITCODE -ne 0) { throw "Browser feature validation failed; deployment stopped." }
 
 $configuration = gcloud run services describe $ServiceName --region $Region --project $ProjectId --format=json | ConvertFrom-Json
@@ -46,6 +46,6 @@ $serviceUrl = gcloud run services describe $ServiceName --region $Region --proje
 if ($LASTEXITCODE -ne 0) { throw "Cannot read deployed service URL." }
 $readiness = Invoke-RestMethod "$serviceUrl/health/ready"
 if ($readiness.status -ne "ok") { throw "Deployed service is not ready." }
-python validate_site.py --base-url $serviceUrl --report (Join-Path $env:TEMP "poe-web-postdeploy-validation.json")
+python scripts/validate_site.py --base-url $serviceUrl --report (Join-Path $env:TEMP "poe-web-postdeploy-validation.json")
 if ($LASTEXITCODE -ne 0) { throw "Deployment finished, but live feature verification failed." }
 Write-Host "Deploy Success: $serviceUrl" -ForegroundColor Green

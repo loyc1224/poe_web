@@ -17,8 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # 讓 `monitor` package 可被匯入
 
-from monitor.config import LEAGUE_NAME  # noqa: E402
-from monitor.ninja_client import fetch_economy  # noqa: E402
+from monitor.economy.config import LEAGUE_NAME  # noqa: E402
+from monitor.economy.ninja_client import fetch_economy  # noqa: E402
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "output"
 TW_OVERRIDE_PATH = Path(__file__).resolve().parent / "tw_price_overrides.json"

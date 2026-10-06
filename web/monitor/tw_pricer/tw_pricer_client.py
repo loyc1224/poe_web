@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "cache"
+DATA_DIR = Path(__file__).resolve().parents[2] / "cache"
 DATA_DIR.mkdir(exist_ok=True)
 
 

@@ -3,6 +3,7 @@ import atexit
 import json
 import os
 import re
+import sys
 import tempfile
 import threading
 from datetime import datetime, timezone
@@ -11,6 +12,9 @@ from urllib.parse import parse_qs, urlsplit
 
 from dotenv import load_dotenv
 from playwright.sync_api import expect, sync_playwright
+
+WEB_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(WEB_DIR))
 
 
 def require(condition, message):
@@ -297,6 +301,93 @@ def check_legacy_pricer(page):
     page.unroute('**/api/pricer/currency?**', fixture)
 
 
+def check_stash_dashboard(page, artifacts, viewport_name):
+    page.goto('/stash', wait_until='domcontentloaded')
+    live_state = page.request.get('/api/stash/state').json()
+    require(live_state.get('supported_games') == ['poe1'], 'Unsupported PoE2 stash access must not be presented as working')
+    if not live_state.get('oauth_connected'):
+        expect(page.locator('#sync')).to_be_disabled()
+        expect(page.locator('#total')).to_have_text('—')
+    if not live_state.get('oauth_configured'):
+        expect(page.locator('#connect')).to_have_attribute('href', '/api/pricer/oauth/start?return_to=stash')
+        expect(page.locator('#connectLabel')).to_have_text('連結帳號')
+        require(page.locator('#connect').get_attribute('aria-disabled') is None, 'Official authorization link must not be disabled')
+        page.locator('#connectionSettings').click()
+        expect(page.locator('#connectionDialog')).to_be_visible()
+        expect(page.locator('#connectionRequirements')).to_contain_text('POE_TW_CLIENT_ID')
+        expect(page.locator('#connectionRequirements')).to_contain_text('POE_TW_CLIENT_SECRET')
+        page.locator('#closeConnectionDialog').click()
+        expect(page.locator('#connectionDialog')).not_to_be_visible()
+        expect(page.locator('#sync')).to_be_disabled()
+        with page.expect_navigation(wait_until='domcontentloaded'):
+            page.locator('#connect').click()
+        require(urlsplit(page.url).path == '/stash', 'Incomplete account setup must return to the stash page')
+        expect(page.locator('#notice')).not_to_be_empty()
+    fixture_state = {
+        'status': 'ok', 'oauth_configured': True, 'oauth_connected': True, 'config_error': None,
+        'account_name': 'Fixture account', 'league': 'test-league', 'updated_at': __import__('time').time(),
+        'selection': {}, 'supported_games': ['poe1'],
+        'history': [{'created_at': __import__('time').time()-3600, 'total_divine': 10}, {'created_at': __import__('time').time(), 'total_divine': 11}],
+        'valuation': {'total_divine': 11, 'unpriced_count': 1, 'tabs': [
+            {'id': 'currency', 'name': 'Currency tab', 'colour': '30aa80', 'included': True, 'value_divine': 11},
+            {'id': 'unknown', 'name': 'Unpriced tab', 'colour': 'bc7830', 'included': True, 'value_divine': 0},
+        ], 'resources': [
+            {'name': 'Divine fixture', 'category': 'currency', 'quantity': 10, 'value_divine': 10, 'item_ids': ['divines'], 'tabs': ['Currency tab'], 'included': True, 'icon': 'https://web.poecdn.com/image/Art/2DItems/Currency/CurrencyModValues.png'},
+            {'name': 'Chaos fixture', 'category': 'currency', 'quantity': 500, 'value_divine': 1, 'item_ids': ['chaos'], 'tabs': ['Currency tab'], 'included': True, 'icon': 'https://web.poecdn.com/image/Art/2DItems/Currency/CurrencyRerollRare.png'},
+            {'name': 'Rare unpriced fixture', 'category': 'unpriced', 'quantity': 1, 'value_divine': None, 'item_ids': ['rare'], 'tabs': ['Unpriced tab'], 'included': True, 'icon': ''},
+        ], 'categories': [{'id': 'currency', 'value_divine': 11}]},
+    }
+    original_rows = list(fixture_state['valuation']['resources'])
+    posts = []
+
+    def fixture(route):
+        if route.request.method == 'POST':
+            payload = route.request.post_data_json
+            posts.append({'path': urlsplit(route.request.url).path, 'payload': payload})
+            if route.request.url.endswith('/selection'):
+                selected = payload['selected_tabs']
+                fixture_state['selection'] = payload
+                for tab in fixture_state['valuation']['tabs']:
+                    tab['included'] = tab['id'] in selected
+                fixture_state['valuation']['resources'] = original_rows if selected else []
+                fixture_state['valuation']['total_divine'] = 11 if 'currency' in selected else 0
+            route.fulfill(json={'status': 'ok'})
+        else:
+            route.fulfill(json=fixture_state)
+
+    page.route('**/api/stash/**', fixture)
+    page.reload(wait_until='domcontentloaded')
+    expect(page.locator('#total')).to_have_text('11 d')
+    expect(page.locator('#account')).to_have_text('Fixture account')
+    page.locator('#search').fill('no-such-item')
+    expect(page.locator('#rows tr')).to_have_count(1)
+    page.locator('#search').fill('')
+    for value in ('quantity', 'name', 'value'):
+        page.locator('#sort').select_option(value)
+    page.locator('#category').select_option('unpriced')
+    expect(page.locator('#rows')).to_contain_text('未估價')
+    page.locator('#category').select_option('')
+    page.locator('#percent').click()
+    expect(page.locator('#categories')).to_contain_text('100.0%')
+    page.locator('#clearTabs').click()
+    expect(page.locator('#total')).to_have_text('0 d')
+    expect(page.locator('#allTabs')).to_be_enabled()
+    page.locator('#allTabs').click()
+    expect(page.locator('#total')).to_have_text('11 d')
+    expect(page.locator('#sync')).to_be_enabled()
+    page.locator('#sync').click()
+    expect(page.locator('#sync')).to_be_enabled()
+    page.locator('#range').select_option('30')
+    page.locator('#chartMode').select_option('hourly')
+    page.locator('#chartMode').select_option('total')
+    require(any(post['path'] == '/api/stash/sync' for post in posts), 'Sync button did not invoke the explicit sync operation')
+    check_images(page, '#rows img')
+    require(page.locator('#historyChart').evaluate('canvas => canvas.width > 0 && canvas.height > 0'), 'History chart has no stable dimensions')
+    require(page.locator('#historyChart').evaluate('canvas => { const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data; return pixels.some((value, index) => index % 4 === 3 && value > 0); }'), 'History chart did not render any pixels')
+    page.screenshot(path=str(artifacts / f'stash-{viewport_name}.png'), full_page=True)
+    page.unroute('**/api/stash/**', fixture)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url")
@@ -305,7 +396,7 @@ def main():
     parser.add_argument("--require-oauth", action="store_true")
     parser.add_argument("--verify-official-trade", action="store_true")
     args = parser.parse_args()
-    load_dotenv(Path(__file__).with_name(".env"))
+    load_dotenv(WEB_DIR / ".env")
     if not args.base_url:
         from werkzeug.serving import make_server
 
@@ -363,9 +454,10 @@ def main():
             run(f"{name}: documents and images", lambda: check_documents(page))
             run(f"{name}: seven price panels, exact trade queries and current prices", lambda: check_prices(page, args.verify_official_trade and name == 'desktop', official_results))
             run(f"{name}: equipment/shop/waystone filters and clipboard permissions", lambda: check_filters(page, context))
-            run(f"{name}: browser JavaScript errors", lambda: require(not errors, "Browser JavaScript errors: " + "; ".join(errors)))
             page.screenshot(path=str(artifacts / f"{name}.png"), full_page=True)
             run(f"{name}: legacy pricer controls (deterministic fixture)", lambda: check_legacy_pricer(page))
+            run(f"{name}: stash dashboard controls (fixture; real OAuth separate)", lambda: check_stash_dashboard(page, artifacts, name))
+            run(f"{name}: browser JavaScript errors", lambda: require(not errors, "Browser JavaScript errors: " + "; ".join(errors)))
             state = page.request.get("/api/pricer/stash/state").json()
             results.append({"feature": f"{name}: real OAuth login and authorized stash sync", "status": "BLOCKED", "detail": "Requires a registered OAuth client and an interactive account authorization; not simulated as a successful login", "oauth_configured": state.get("oauth_configured", False)})
             context.close()

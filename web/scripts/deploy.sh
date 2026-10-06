@@ -10,7 +10,7 @@ echo "Project: ${PROJECT_ID}"
 echo "Region : ${REGION}"
 echo "Service: ${SERVICE_NAME}"
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 gcloud config set project "${PROJECT_ID}"
 

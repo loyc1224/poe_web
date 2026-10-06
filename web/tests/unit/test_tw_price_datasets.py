@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import app as web_app
-from monitor import tw_pricer_client, tw_pricer_source
+from monitor.tw_pricer import tw_pricer_client, tw_pricer_source
 
 
 def make_response(payload):

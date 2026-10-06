@@ -33,3 +33,7 @@ Thumbs.db
 # Docker
 *.dockerignore
 !web/.dockerignore
+
+# Private OAuth and stash data
+web/cache/stash.db
+web/cache/stash.db-*

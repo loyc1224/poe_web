@@ -12,7 +12,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot
+Set-Location (Split-Path -Parent $PSScriptRoot)
 
 $bucketUri = "gs://$BucketName"
 & gcloud config set project $ProjectId | Out-Null

@@ -5,10 +5,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+WEB_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(WEB_DIR))
+load_dotenv(WEB_DIR / ".env")
 
-from monitor.tw_pricer_source import refresh_all_tw_prices, refresh_trade_metadata
+from monitor.tw_pricer.tw_pricer_source import refresh_all_tw_prices, refresh_trade_metadata
 
 
 if __name__ == "__main__":

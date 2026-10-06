@@ -1,0 +1,1 @@
+"""Focused tests for domain modules and pure behavior."""

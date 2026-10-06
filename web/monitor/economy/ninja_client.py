@@ -12,7 +12,7 @@ from .config import CACHE_TTL, ECONOMY_TYPES, LEAGUE_NAME, POE1_ECONOMY_TYPES, P
 from .translations import ITEM_ZH
 
 # ── 快取目錄 ─────────────────────────────────────────────────────────────────
-CACHE_DIR = Path(__file__).resolve().parent.parent / "cache"
+CACHE_DIR = Path(__file__).resolve().parents[2] / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 # ── API 端點 ─────────────────────────────────────────────────────────────────

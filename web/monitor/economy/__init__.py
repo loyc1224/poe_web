@@ -1,0 +1,1 @@
+"""Legacy poe.ninja economy client and shared configuration."""

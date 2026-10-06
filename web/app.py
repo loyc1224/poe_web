@@ -25,16 +25,22 @@ from monitor import (
     fetch_economy,
     fetch_poe1_economy,
 )
-from monitor.config import POE2_LEAGUES, POE1_STANDARD
-from monitor.translations import ITEM_ZH
-from monitor.tw_pricer_client import load_tw_price_dataset, load_tw_price_navigation_icons
-from monitor.tw_pricer_source import refresh_all_tw_prices
+from monitor.economy.config import POE2_LEAGUES, POE1_STANDARD
+from monitor.economy.translations import ITEM_ZH
+from monitor.tw_pricer.tw_pricer_client import load_tw_price_dataset, load_tw_price_navigation_icons
+from monitor.tw_pricer.tw_pricer_source import refresh_all_tw_prices
+from monitor.stash.store import StashStore
+from monitor.stash.client import StashApiError, fetch_account_stashes
+from monitor.stash.pricer import value_stashes, flatten_stash_items
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY") or os.getenv("SECRET_KEY") or secrets.token_hex(32)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(os.getenv("K_SERVICE"))
 STRATEGY_PASSWORD = os.getenv("STRATEGY_PASSWORD", "")
 _strategy_login_attempts: dict[str, tuple[int, float]] = {}
 _strategy_login_lock = threading.Lock()
@@ -48,7 +54,8 @@ _stash_lock = threading.Lock()
 OAUTH_AUTHORIZE_URL = "https://pathofexile.tw/oauth/authorize"
 OAUTH_TOKEN_URL = "https://pathofexile.tw/oauth/token"
 OAUTH_CLIENT_ID = os.getenv("POE_TW_CLIENT_ID", "").strip()
-OAUTH_SCOPE = "account:profile account:leagues account:stashes account:characters"
+OAUTH_CLIENT_SECRET = os.getenv("POE_TW_CLIENT_SECRET", "").strip()
+OAUTH_SCOPE = "account:profile account:stashes"
 OAUTH_REDIRECT_URI = os.getenv("POE_TW_REDIRECT_URI", "").strip()
 OAUTH_STATE_TTL_SECONDS = 600
 
@@ -259,15 +266,39 @@ def _build_pkce_pair() -> tuple[str, str]:
 
 
 def _save_pkce_state(state: str, code_verifier: str) -> None:
-    _ensure_stash_db()
-    cutoff = time.time() - (OAUTH_STATE_TTL_SECONDS * 2)
-    with _stash_lock:
-        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO oauth_pkce_states (state, code_verifier, created_at) VALUES (?, ?, ?)",
-                (state, code_verifier, time.time()),
-            )
-            conn.execute("DELETE FROM oauth_pkce_states WHERE created_at < ?", (cutoff,))
+    data = _stash_data()
+    data["pkce"] = {"state": state, "verifier": code_verifier, "created_at": time.time()}
+    _stash_store().save(_stash_owner(create=True), data)
+
+
+def _stash_owner(create=False):
+    owner = session.get("stash_connection_id")
+    if not owner and create:
+        owner = secrets.token_urlsafe(32)
+        session["stash_connection_id"] = owner
+    return owner
+
+
+def _stash_store():
+    return StashStore(STASH_DB, app.config["SECRET_KEY"], os.getenv("STASH_STORAGE_BUCKET", "").strip())
+
+
+def _stash_data():
+    owner = _stash_owner()
+    return _stash_store().load(owner) if owner else {}
+
+
+def _stash_storage_ready():
+    return not os.getenv("K_SERVICE") or bool(os.getenv("STASH_STORAGE_BUCKET"))
+
+
+def _stash_selection_key(data):
+    selection = data.get("selection", {})
+    selected = selection.get("selected_tabs")
+    if selected is None:
+        selected = [str(tab["id"]) for tab in data.get("tabs", [])]
+    encoded = json.dumps({"tabs": sorted(selected), "excluded": sorted(selection.get("excluded_items", []))}, sort_keys=True)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _resolve_oauth_redirect_uri() -> str:
@@ -286,72 +317,59 @@ def _validate_oauth_config() -> str | None:
     # The public poepricer client id is bound to its production callback only.
     if OAUTH_CLIENT_ID == "poetwpricer" and uri != "https://www.poepricer.com/callback":
         return "client_redirect_mismatch+poetwpricer"
+    if not OAUTH_CLIENT_SECRET:
+        return "missing+POE_TW_CLIENT_SECRET"
+    if not app.testing:
+        from urllib.parse import urlsplit
+
+        callback = urlsplit(uri)
+        if callback.scheme != "https" or callback.netloc != request.host:
+            return "invalid+POE_TW_REDIRECT_URI"
+    if not _stash_storage_ready():
+        return "missing+STASH_STORAGE_BUCKET"
     return None
 
 
 def _pop_pkce_verifier(state: str) -> str | None:
-    _ensure_stash_db()
-    with _stash_lock:
-        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-            row = conn.execute(
-                "SELECT code_verifier, created_at FROM oauth_pkce_states WHERE state = ?",
-                (state,),
-            ).fetchone()
-            conn.execute("DELETE FROM oauth_pkce_states WHERE state = ?", (state,))
-    if not row:
+    data = _stash_data()
+    pending = data.get("pkce", {})
+    if pending.get("state") != state:
         return None
-    created_at = float(row[1])
-    if time.time() - created_at > OAUTH_STATE_TTL_SECONDS:
+    data.pop("pkce", None)
+    _stash_store().save(_stash_owner(), data)
+    if time.time() - float(pending.get("created_at", 0)) > OAUTH_STATE_TTL_SECONDS:
         return None
-    return row[0]
+    return pending.get("verifier")
 
 
-def _save_tokens(token_payload: dict) -> None:
-    _ensure_stash_db()
-    expires_in = int(token_payload.get("expires_in") or 0)
-    expires_at = time.time() + max(expires_in, 0)
-    with _stash_lock:
-        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-            conn.execute(
-                """
-                INSERT INTO oauth_tokens (id, access_token, refresh_token, expires_at, token_type)
-                VALUES (1, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    access_token=excluded.access_token,
-                    refresh_token=excluded.refresh_token,
-                    expires_at=excluded.expires_at,
-                    token_type=excluded.token_type
-                """,
-                (
-                    token_payload.get("access_token", ""),
-                    token_payload.get("refresh_token"),
-                    expires_at,
-                    token_payload.get("token_type", "Bearer"),
-                ),
-            )
+def _save_tokens(token_payload: dict, initial_authorization=False) -> None:
+    data = _stash_data()
+    subject = token_payload.get("sub")
+    if (initial_authorization and (not subject or data.get("subject") != subject)) or (subject and data.get("subject") and data["subject"] != subject):
+        data = {}
+    if subject:
+        data["subject"] = subject
+    previous = data.get("tokens", {})
+    data["tokens"] = {
+        "access_token": token_payload.get("access_token", ""),
+        "refresh_token": token_payload.get("refresh_token") or previous.get("refresh_token"),
+        "expires_at": time.time() + max(int(token_payload.get("expires_in") or 0), 0),
+        "token_type": token_payload.get("token_type", "Bearer"),
+    }
+    _stash_store().save(_stash_owner(create=True), data)
 
 
 def _clear_tokens() -> None:
-    _ensure_stash_db()
-    with _stash_lock:
-        with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-            conn.execute("DELETE FROM oauth_tokens WHERE id = 1")
+    owner = _stash_owner()
+    if owner:
+        data = _stash_data()
+        data.pop("tokens", None)
+        data.pop("pkce", None)
+        _stash_store().save(owner, data)
 
 
 def _load_tokens() -> dict | None:
-    _ensure_stash_db()
-    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-        row = conn.execute(
-            "SELECT access_token, refresh_token, expires_at, token_type FROM oauth_tokens WHERE id = 1"
-        ).fetchone()
-    if not row:
-        return None
-    return {
-        "access_token": row[0],
-        "refresh_token": row[1],
-        "expires_at": float(row[2] or 0),
-        "token_type": row[3] or "Bearer",
-    }
+    return _stash_data().get("tokens")
 
 
 def _refresh_access_token(refresh_token: str) -> dict:
@@ -362,6 +380,7 @@ def _refresh_access_token(refresh_token: str) -> dict:
         data={
             "grant_type": "refresh_token",
             "client_id": OAUTH_CLIENT_ID,
+            "client_secret": OAUTH_CLIENT_SECRET,
             "refresh_token": refresh_token,
         },
         timeout=12,
@@ -490,83 +509,52 @@ def _save_stash_state(
 
 
 def _sync_stash_with_token(access_token: str, game: str, league: str) -> dict:
-    endpoints = [
-        "https://pathofexile.tw/api/trade2/account/stashes",
-        "https://pathofexile.tw/api/account/stashes",
-    ]
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/json",
-    }
+    if not _stash_storage_ready():
+        raise StashApiError(503, "Configure persistent private stash storage before syncing")
+    data = _stash_data()
+    try:
+        fetched = fetch_account_stashes(access_token, game, league)
+    except StashApiError as error:
+        if error.status == 401:
+            _clear_tokens()
+        raise
+    datasets = _stash_datasets(game, league)
+    selection = data.get("selection", {}) if data.get("league") == league and data.get("game") == game else {}
+    stable_ids = {str(item["id"]) for tab in fetched["tabs"] for item in flatten_stash_items(tab.get("items")) if item.get("id")}
+    selection = {**selection, "excluded_items": [identifier for identifier in selection.get("excluded_items", []) if identifier in stable_ids]}
+    result = value_stashes(fetched["tabs"], datasets, game, league, selection.get("selected_tabs"), selection.get("excluded_items"))
+    updated_at = time.time()
+    data.update({**fetched, "selection": selection, "valuation": result, "updated_at": updated_at})
+    history = data.get("history", [])[-199:]
+    history.append({"created_at": updated_at, "total_divine": result["total_divine"], "unpriced_count": result["unpriced_count"], "game": game, "league": league, "selection_key": _stash_selection_key(data)})
+    data["history"] = history
+    _stash_store().save(_stash_owner(), data)
+    return {**result, "account_name": fetched["account_name"], "updated_at": updated_at, "source": "official-oauth"}
 
-    errors: list[str] = []
-    unauthorized_hits = 0
-    for endpoint in endpoints:
+
+def _stash_datasets(game, league):
+    datasets = {}
+    for kind in ("currency", "unique", "gem", "beast"):
         try:
-            resp = requests.get(endpoint, params={"game": game, "league": league}, headers=headers, timeout=15)
-            if resp.status_code == 401:
-                unauthorized_hits += 1
-                errors.append(f"{endpoint} => 401")
-                continue
-            if resp.status_code >= 400:
-                errors.append(f"{endpoint} => {resp.status_code}")
-                continue
-            payload = resp.json()
-            parsed = _extract_stash_payload(payload, game, league)
-            if not parsed:
-                errors.append(f"{endpoint} => invalid payload")
-                continue
-            return _save_stash_state(
-                parsed["account_name"],
-                parsed["game"],
-                parsed["league"],
-                parsed["tabs"],
-                source="oauth",
-                raw_payload=payload,
-            )
-        except Exception as exc:
-            errors.append(f"{endpoint} => {exc}")
-
-    if unauthorized_hits == len(endpoints):
-        _clear_tokens()
-        raise RuntimeError("授權已失效或 access token 無效，請重新登入後再同步。")
-
-    raise RuntimeError("; ".join(errors) or "stash sync failed")
+            dataset = load_tw_price_dataset(game, kind)
+        except FileNotFoundError:
+            continue
+        if dataset.get("game") != game or dataset.get("league") != league:
+            raise ValueError("Published prices do not match the selected game and league")
+        datasets[kind] = dataset
+    return datasets
 
 
 def _read_stash_state() -> dict | None:
-    _ensure_stash_db()
-    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-        row = conn.execute(
-            "SELECT account_name, game, league, tabs_json, updated_at FROM stash_state WHERE id = 1"
-        ).fetchone()
-    if not row:
+    data = _stash_data()
+    if not data.get("valuation"):
         return None
-    tabs_json = row[3] or "[]"
-    try:
-        tabs = json.loads(tabs_json)
-    except Exception:
-        tabs = []
-    return {
-        "account_name": row[0],
-        "game": row[1],
-        "league": row[2],
-        "tabs": tabs,
-        "updated_at": float(row[4] or 0),
-    }
+    return {**data["valuation"], "account_name": data.get("account_name", ""), "updated_at": data.get("updated_at", 0)}
 
 
 def _read_stash_raw_payload() -> object | None:
-    _ensure_stash_db()
-    with closing(sqlite3.connect(STASH_DB)) as conn, conn:
-        row = conn.execute("SELECT raw_json FROM stash_state WHERE id = 1").fetchone()
-    if not row:
-        return None
-    raw_json = row[0] or "{}"
-    try:
-        return json.loads(raw_json)
-    except Exception:
-        return None
+    data = _stash_data()
+    return {"tabs": data["tabs"]} if data.get("tabs") is not None else None
 
 
 def _to_number(value: object, fallback: float = 0.0) -> float:
@@ -857,6 +845,104 @@ def pricer():
     )
 
 
+@app.route("/stash")
+def stash_dashboard():
+    return render_template("stash.html")
+
+
+@app.after_request
+def private_stash_cache(response):
+    if request.path == "/stash" or request.path.startswith(("/api/stash/", "/api/pricer/stash/")):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@app.before_request
+def stash_write_origin():
+    if request.path.startswith("/api/stash/") and request.method == "POST":
+        from urllib.parse import urlsplit
+
+        origin = request.headers.get("Origin")
+        if origin and urlsplit(origin).netloc != request.host:
+            return {"status": "error", "message": "Cross-origin stash changes are not allowed"}, 403
+        if not isinstance(request.get_json(silent=True), dict):
+            return {"status": "error", "message": "Provide a JSON object"}, 400
+
+
+@app.route("/api/stash/state")
+def stash_dashboard_state():
+    data = _stash_data()
+    config_error = _validate_oauth_config()
+    try:
+        league = load_tw_price_dataset("poe1", "currency")["league"]
+    except (FileNotFoundError, ValueError):
+        league = ""
+    history = [entry for entry in data.get("history", []) if entry.get("game") == data.get("game") and entry.get("league") == data.get("league") and entry.get("selection_key") == _stash_selection_key(data)]
+    connection_setup = {
+        "client_id": bool(OAUTH_CLIENT_ID),
+        "client_secret": bool(OAUTH_CLIENT_SECRET),
+        "registered_callback": bool(OAUTH_REDIRECT_URI),
+        "private_storage": _stash_storage_ready(),
+    }
+    return {"status": "ok", "oauth_configured": config_error is None, "oauth_connected": bool(data.get("tokens", {}).get("access_token")), "config_error": config_error, "connection_setup": connection_setup, "supported_games": ["poe1"], "account_name": data.get("account_name", ""), "league": data.get("league") or league, "updated_at": data.get("updated_at"), "valuation": data.get("valuation"), "selection": data.get("selection", {}), "history": history, "storage": "private-gcs" if os.getenv("STASH_STORAGE_BUCKET") else "local-encrypted-sqlite"}
+
+
+@app.route("/api/stash/sync", methods=["POST"])
+def stash_dashboard_sync():
+    payload = request.get_json()
+    game = payload.get("game", "poe1")
+    league = payload.get("league")
+    if game != "poe1":
+        return {"status": "unavailable", "message": "Official private stash API currently supports PoE1 only"}, 409
+    if not isinstance(league, str) or not league.strip() or len(league) > 100:
+        return {"status": "error", "message": "Choose a league"}, 400
+    with _stash_lock:
+        token = _get_valid_access_token()
+        if not token:
+            return {"status": "error", "message": "Connect the official account before syncing"}, 401
+        try:
+            result = _sync_stash_with_token(token, game, league.strip())
+        except StashApiError as error:
+            return {"status": "error", "message": str(error)}, error.status
+        except (ValueError, FileNotFoundError) as error:
+            return {"status": "unavailable", "message": str(error)}, 409
+    return {"status": "ok", "stash": result}
+
+
+@app.route("/api/stash/selection", methods=["POST"])
+def stash_dashboard_selection():
+    payload = request.get_json()
+    selected = payload.get("selected_tabs")
+    excluded = payload.get("excluded_items", [])
+    if not isinstance(selected, list) or not isinstance(excluded, list) or len(selected) > 1000 or len(excluded) > 10000 or any(not isinstance(value, str) for value in selected + excluded):
+        return {"status": "error", "message": "Invalid stash selection"}, 400
+    with _stash_lock:
+        data = _stash_data()
+        if not data.get("tabs"):
+            return {"status": "error", "message": "Sync stash contents before selecting tabs"}, 409
+        tab_ids = {str(tab["id"]) for tab in data["tabs"]}
+        item_ids = {str(item.get("id") or f'{tab["id"]}:{position}') for tab in data["tabs"] for position, item in enumerate(flatten_stash_items(tab.get("items")))}
+        if set(selected) - tab_ids or set(excluded) - item_ids:
+            return {"status": "error", "message": "Selection does not belong to this account"}, 400
+        selection = {"selected_tabs": selected, "excluded_items": excluded}
+        try:
+            result = value_stashes(data["tabs"], _stash_datasets(data["game"], data["league"]), data["game"], data["league"], selected, excluded)
+        except (ValueError, FileNotFoundError) as error:
+            return {"status": "unavailable", "message": str(error)}, 409
+        data.update({"selection": selection, "valuation": result})
+        _stash_store().save(_stash_owner(), data)
+    return {"status": "ok", "valuation": result}
+
+
+@app.route("/api/stash/disconnect", methods=["POST"])
+def stash_dashboard_disconnect():
+    owner = _stash_owner()
+    if owner:
+        _stash_store().delete(owner)
+    session.pop("stash_connection_id", None)
+    return {"status": "ok"}
+
+
 @app.route("/tw-pricer")
 def legacy_tw_pricer():
     game = (request.args.get("game") or "poe1").strip().lower()
@@ -947,14 +1033,14 @@ def pricer_currency():
 
 @app.route("/api/pricer/oauth/start")
 def pricer_oauth_start():
+    session["oauth_return_path"] = "/stash" if request.args.get("return_to") == "stash" else "/pricer"
     config_error = _validate_oauth_config()
     if config_error:
-        return redirect(f"/pricer?oauth=error&message={config_error}", code=302)
+        return _oauth_error_redirect(config_error)
 
     state = secrets.token_urlsafe(24)
     code_verifier, code_challenge = _build_pkce_pair()
     session["oauth_state"] = state
-    session["oauth_code_verifier"] = code_verifier
     session["oauth_state_created_at"] = time.time()
     _save_pkce_state(state, code_verifier)
     redirect_uri = _resolve_oauth_redirect_uri()
@@ -971,37 +1057,37 @@ def pricer_oauth_start():
     return redirect(f"{OAUTH_AUTHORIZE_URL}?{urlencode(params)}", code=302)
 
 
+def _oauth_error_redirect(message):
+    target = session.get("oauth_return_path", "/pricer")
+    if target not in ("/stash", "/pricer"):
+        target = "/pricer"
+    return redirect(f"{target}?{urlencode({'oauth': 'error', 'message': message})}", code=302)
+
+
 @app.route("/callback")
 def pricer_oauth_callback():
     config_error = _validate_oauth_config()
     if config_error:
-        return redirect(f"/pricer?oauth=error&message={config_error}", code=302)
+        return _oauth_error_redirect(config_error)
 
     if request.args.get("error"):
         err = request.args.get("error_description") or request.args.get("error")
-        return redirect(f"/pricer?oauth=error&message={quote_plus(err)}", code=302)
+        return _oauth_error_redirect(err)
 
     state = (request.args.get("state") or "").strip()
     code = (request.args.get("code") or "").strip()
     if not state or not code:
-        return redirect("/pricer?oauth=error&message=missing+state+or+code", code=302)
+        return _oauth_error_redirect("missing state or code")
 
     session_state = str(session.get("oauth_state") or "")
-    session_verifier = str(session.get("oauth_code_verifier") or "")
-    state_created = float(session.get("oauth_state_created_at") or 0)
-
-    verifier = None
-    if session_state == state and session_verifier and (time.time() - state_created <= OAUTH_STATE_TTL_SECONDS):
-        verifier = session_verifier
-    else:
-        verifier = _pop_pkce_verifier(state)
+    verifier = _pop_pkce_verifier(state) if session_state == state else None
 
     session.pop("oauth_state", None)
     session.pop("oauth_code_verifier", None)
     session.pop("oauth_state_created_at", None)
 
     if not verifier:
-        return redirect("/pricer?oauth=error&message=invalid+or+expired+state", code=302)
+        return _oauth_error_redirect("invalid or expired state")
 
     redirect_uri = _resolve_oauth_redirect_uri()
 
@@ -1011,6 +1097,7 @@ def pricer_oauth_callback():
             data={
                 "grant_type": "authorization_code",
                 "client_id": OAUTH_CLIENT_ID,
+                "client_secret": OAUTH_CLIENT_SECRET,
                 "code": code,
                 "redirect_uri": redirect_uri,
                 "code_verifier": verifier,
@@ -1019,20 +1106,15 @@ def pricer_oauth_callback():
             headers={"Accept": "application/json"},
         )
         if token_resp.status_code >= 400:
-            return redirect(
-                f"/pricer?oauth=error&message=token+exchange+failed+{token_resp.status_code}",
-                code=302,
-            )
+            return _oauth_error_redirect(f"token exchange failed {token_resp.status_code}")
         payload = token_resp.json()
         if not payload.get("access_token"):
-            return redirect("/pricer?oauth=error&message=token+missing", code=302)
-        _save_tokens(payload)
+            return _oauth_error_redirect("token missing")
+        _save_tokens(payload, initial_authorization=True)
 
-        sync_data = _sync_stash_with_token(payload["access_token"], game="poe2", league=CURRENT_LEAGUE_NAME)
-        tabs_count = len(sync_data.get("tabs") or [])
-        return redirect(f"/pricer?oauth=ok&tabs={tabs_count}", code=302)
+        return redirect("/stash?oauth=connected", code=302)
     except Exception as exc:
-        return redirect(f"/pricer?oauth=error&message={quote_plus(str(exc))}", code=302)
+        return _oauth_error_redirect(str(exc))
 
 
 @app.route("/api/pricer/stash/state")
@@ -1048,6 +1130,12 @@ def pricer_stash_state():
         config_message = "POE_TW_REDIRECT_URI 格式不正確。"
     elif config_error == "client_redirect_mismatch+poetwpricer":
         config_message = "目前使用的 client_id=poetwpricer 僅允許 https://www.poepricer.com/callback，無法用本機 callback。"
+    elif config_error == "missing+POE_TW_CLIENT_SECRET":
+        config_message = "請先設定本站 OAuth client secret。"
+    elif config_error == "missing+STASH_STORAGE_BUCKET":
+        config_message = "請先設定正式倉庫持久儲存。"
+    if state:
+        state = {**state, "tabs": [{**tab, "enabled": tab.get("included", True)} for tab in state["tabs"]]}
 
     return {
         "status": "ok",
@@ -1066,7 +1154,7 @@ def pricer_stash_sync():
     league = str(payload.get("league") or CURRENT_LEAGUE_NAME).strip()
     if game not in ("poe1", "poe2"):
         return {"status": "error", "message": "無效的 game 參數"}, 400
-    if league and not re.match(r"^[A-Za-z0-9 _\-]{1,60}$", league):
+    if len(league) > 100 or any(ord(character) < 32 for character in league):
         return {"status": "error", "message": "無效的聯盟名稱"}, 400
 
     access_token = _get_valid_access_token()
@@ -1075,7 +1163,9 @@ def pricer_stash_sync():
 
     try:
         stash_state = _sync_stash_with_token(access_token, game=game, league=league)
-        return {"status": "ok", "stash": stash_state}
+        return {"status": "ok", "stash": {**stash_state, "tabs": [{**tab, "enabled": tab.get("included", True)} for tab in stash_state["tabs"]]}}
+    except StashApiError as error:
+        return {"status": "error", "message": str(error)}, error.status
     except Exception as exc:
         return {"status": "error", "message": str(exc)}, 502
 
@@ -1086,18 +1176,20 @@ def pricer_stash_resources():
     stash_state = _read_stash_state()
 
     if refresh:
-        access_token = _get_valid_access_token()
-        if not access_token:
+        if not _load_tokens():
             return {"status": "error", "message": "尚未授權，請先登入。"}, 401
-        game = str(request.args.get("game") or (stash_state or {}).get("game") or "poe2").lower()
-        league = str(request.args.get("league") or (stash_state or {}).get("league") or CURRENT_LEAGUE_NAME)
-        stash_state = _sync_stash_with_token(access_token, game=game, league=league)
+        data = _stash_data()
+        if data.get("tabs") is not None:
+            selection = data.get("selection", {})
+            result = value_stashes(data["tabs"], _stash_datasets(data["game"], data["league"]), data["game"], data["league"], selection.get("selected_tabs"), selection.get("excluded_items"))
+            stash_state = {**result, "account_name": data.get("account_name", ""), "updated_at": data.get("updated_at", 0)}
 
-    raw_payload = _read_stash_raw_payload()
-    if not raw_payload:
+    if not stash_state:
         return {"status": "error", "message": "尚無倉庫資料，請先完成授權並同步。"}, 404
 
-    stats = _build_stash_resource_stats(raw_payload)
+    resources = [{**row, "tab_count": len(row["tabs"])} for row in stash_state["resources"]]
+    categories = [{"category": category["id"], "value_divine": category["value_divine"], "kinds": sum(row["category"] == category["id"] for row in resources), "quantity": sum(row["quantity"] for row in resources if row["category"] == category["id"])} for category in stash_state["categories"]]
+    stats = {"resources": resources, "categories": categories, "resource_count": len(resources), "item_instances": sum(len(row["item_ids"]) for row in resources), "unpriced_count": stash_state["unpriced_count"]}
     return {
         "status": "ok",
         "account_name": (stash_state or {}).get("account_name", ""),

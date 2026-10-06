@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Set-Location $PSScriptRoot
+Set-Location (Split-Path -Parent $PSScriptRoot)
 
 if ([string]::IsNullOrWhiteSpace($RedirectUri)) {
     $RedirectUri = "http://$BindHost`:$Port/callback"

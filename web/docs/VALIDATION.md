@@ -1,6 +1,6 @@
 # 網站功能驗證與共用範本
 
-遵循 [核心規範 CORE-005](../PROJECT_RULES.md)。本文件提供可重跑的驗證程序、覆蓋範圍與驗收報告範本，不能以首頁或健康端點的 HTTP 200 代替逐項驗收。
+遵循 [核心規範 CORE-005](../../PROJECT_RULES.md)。本文件提供可重跑的驗證程序、覆蓋範圍與驗收報告範本，不能以首頁或健康端點的 HTTP 200 代替逐項驗收。
 
 ## 執行程序
 
@@ -10,7 +10,7 @@
 python -m pip install -r requirements.txt -r requirements-validation.txt
 python -m playwright install chromium
 python -m unittest discover -s tests -v
-python validate_site.py --report "$env:TEMP\poe-site-validation-local.json"
+python scripts/validate_site.py --report "$env:TEMP\poe-site-validation-local.json"
 ```
 
 未指定 URL 時，程序自動在隨機本機埠啟動測試站並於結束時關閉。從未追蹤的 `.env` 或環境讀取策略密碼；若沒有固定 session key，只為本機測試設定一個測試值，**不會替正式環境設定機密**。
@@ -20,14 +20,14 @@ python validate_site.py --report "$env:TEMP\poe-site-validation-local.json"
 正式站部署後必須另跑，不可把本機結果當成線上結果：
 
 ```powershell
-python validate_site.py --base-url "https://你的正式站" --report "$env:TEMP\poe-site-validation-live.json"
+python scripts/validate_site.py --base-url "https://你的正式站" --report "$env:TEMP\poe-site-validation-live.json"
 ```
 
 價格／查價缺陷回歸與實際官方公開掛單抽查：
 
 ```powershell
-python refresh_tw_currency.py --trade-metadata-only
-python validate_site.py --verify-official-trade --report "$env:TEMP\poe-site-validation-official-trade.json"
+python scripts/refresh_tw_currency.py --trade-metadata-only
+python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-site-validation-official-trade.json"
 ```
 
 `--verify-official-trade` 使用瀏覽器 DOM 產生的 query 呼叫台服 search/fetch，驗證兩顆回報寶石及魔血、獵首、漢恩的蔑視，每件抽查最多三筆公開掛單。寶石核對完整名稱、Lv21、品質20%、腐化；裝備核對 unique 名稱、基底、已鑑定、官方 rarity 與價格單位，保留貼膜狀態。不輸出賣家帳號、不使用登入憑證。它是明確的管理驗證操作，不是網頁 GET 的即時抓價。官方登入／限流／無資料造成受阻時保留錯誤並停止，不能假稱查到正確物品。
@@ -50,6 +50,8 @@ python validate_site.py --verify-official-trade --report "$env:TEMP\poe-site-val
 | 複製 | 剪貼簿拒絕有錯誤狀態；允許時逐字比對已複製字串 | 無未處理 Promise／pageerror |
 | 舊查價頁 | 兩版切換、搜尋、排序、強制刷新參數，以 deterministic fixture 驗 UI | **不代表外部 poe.ninja 真實刷新或價格正確性已驗證** |
 | OAuth／倉庫 | 離線驗設定缺漏、無效 callback、未登入的 state／sync／resources 邊界 | 真實登入與成功同步需正式 client、callback 及使用者授權；目前 BLOCKED |
+| 新倉庫統計 | 未登入總值—／停用同步，fixture分頁／物品選取、搜尋排序、分類占比、歷史圖、空分頁、圖片解碼與JS錯誤 | fixture不是真實帳號資產；台服OAuth與Cloud Run私有持久儲存仍BLOCKED，詳見STASH.md |
+| 連結帳號 | 主動作保持可點，走官方OAuth後端；獨立齒輪顯示缺設定；unit驗真正302官方URL／PKCE／scope／回呼／Secret不出URL，缺設定與交換失敗回原倉庫頁 | 註冊client缺漏時不能真實授權，不攔截成診斷也不借用他站client；不是解除按鈕灰色就算登入成功 |
 | 流量／圖片代理 | 離線驗 API 回應、代理路徑白名單、來源與回應型別 | 無上游連線的離線測試不代表所有遠端圖片一定可用 |
 | 桌機／手機 | 1440×1000、390×844，各項操作、JS 錯誤與截圖 | 實作者須看截圖，不能只確認產生了檔案 |
 
@@ -57,7 +59,7 @@ python validate_site.py --verify-official-trade --report "$env:TEMP\poe-site-val
 
 ## 部署閘門
 
-- `deploy.ps1` 先跑全部離線測試、自動本機瀏覽器驗證與正式設定存在檢查；任何失敗立即停止。部署後跑正式 readiness 與相同瀏覽器程序。
+- `scripts/deploy.ps1` 先跑全部離線測試、自動本機瀏覽器驗證與正式設定存在檢查；任何失敗立即停止。部署後跑正式 readiness 與相同瀏覽器程序。
 - GitHub Actions 在實際容器設定**僅供測試**的策略密碼與固定 session key，再跑同一程序；測試密碼不會設定到 Cloud Run。
 - GitHub 正式部署前檢查既有服務是否設定策略密碼與固定 session key；部署後檢查 `/health/ready`。Actions 目前不具備正式密碼讀取權限，因此完整線上解鎖驗收仍由安全持有密碼的執行者跑上述正式站程序。
 - 需要人工核准、OAuth 或正式 Secret 設定時，停止並回報實際阻礙，不繞過權限，不把機密放進 artifacts。正式 Secret 建立／IAM／部署仍依當次授權執行。
@@ -79,6 +81,13 @@ python validate_site.py --verify-official-trade --report "$env:TEMP\poe-site-val
 | 2026-10-06 | 變異寶石全名誤作 type、沒有限制等級／品質／腐化，POE2 路徑沿用 POE1 | 官方 metadata 確認兩者是基底型別＋alt_x；唯讀 API 附加 identity，DOM query 逐一比對，實際官方 search/fetch 抽查 |
 | 2026-10-06 | 裝備查價包含未鑑定掛單，無法用官方回應的空 name 驗證完整傳奇名 | 裝備 query 限制已鑑定傳奇；DOM 與官方 response 都驗 identified=true，不把未知名稱當精確驗收 |
 | 2026-10-06 | 貼膜魔血 frameType=10，但官方 rarity=Unique；驗證只接受 frameType=3 誤報失敗 | 優先驗官方 rarity，舊 API 無 rarity 時才接受 frameType=3，保留 foilVariation 證據 |
+| 2026-10-06 | 舊倉庫程式猜端點、假設遊戲已提供value、全站共用token／資料 | 換官方文档端點與PoE1限制；個人加密連線／PKCE隔離，不讀舊共用紀錄，純資料集估值與未估價狀態 |
+| 2026-10-06 | 新頁圖表括號錯誤未初始化，舊JS閘門跑在新頁之前 | 修正圖表結構，所有頁面完成後才檢查pageerror；桌機／手機fixture回歸 |
+| 2026-10-06 | 分頁／物品選取改變可能造成假歷史漲跌，插槽物品可能漏算 | 快照依相同選取範圍過濾；官方物品ID去重，socketedItems／null stackSize與缺ID勾選回歸 |
+| 2026-10-06 | 連結帳號被前端攔截成診斷、授權失敗跳舊查價頁；倉庫模組平鋪難定位 | 正常連結走官方OAuth，診斷拆齒輪，返回原頁；倉庫模組歸到monitor/stash/，更新import／mock、CORE-006與根查找索引 |
+| 2026-10-06 | 未先確認官方受理狀態就把註冊client當成可立即完成，後又把國際服公告直接套用台服 | 國際服Getting Started暫停新申請，但台服政策尚未確認；使用者授權紀錄證明既有台服應用存在。需台服官方確認本站核發途徑／回呼／API，不能推論既有應用是最近核發或借用其client |
+| 2026-10-06 | economy／台服行情模組與測試平鋪，新增功能難依責任定位 | 模組歸類至 `monitor/economy/`、`monitor/tw_pricer/`；測試分 `tests/unit/`、`tests/integration/`；全量 unittest discovery 48 PASS、舊路徑搜尋無殘留，桌機／手機各 10 項 PASS |
+| 2026-10-06 | Web根目錄散落部署／更新／驗證腳本與多份操作Markdown | 腳本移至 `scripts/`、專用手冊移至 `docs/`；修正 CI／命令／匯入根路徑；CLI `--help`、PowerShell parser、完整測試與瀏覽器矩陣做提交前驗證 |
 
 本機與 Python 3.11 實際部署映像完成：20 項離線測試；桌機／手機共 18 項瀏覽器檢查通過，真實 OAuth／授權倉庫同步各有 1 項 BLOCKED。舊查價頁 UI 使用 fixture。
 
@@ -121,3 +130,6 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.0.3 | 2026-10-06 | 新增 unavailable 現價與單位回歸、canonical 名稱／寶石變體精確查詢，以及官方公開掛單的可重跑驗證與結果限制。 |
 | 1.0.4 | 2026-10-06 | 新增三件傳奇裝備的真實掛單回歸、已鑑定限制與貼膜 rarity 邊界，說明不包含稀有詞綴／特定配值估價。 |
 | 1.0.5 | 2026-10-06 | 記錄價格／裝備查價修正的正式 revision、固定映像與完整線上查詢驗收，保留外部授權限制。 |
+| 1.1.0 | 2026-10-06 | 新增倉庫安全／估值回歸，本機與容器45 tests／20 UI checks PASS，真實台服OAuth與持久儲存仍BLOCKED，未部署此功能。 |
+| 1.1.1 | 2026-10-06 | 帳號按鈕與官方OAuth導覽／失敗返回回歸、功能套件歸類；本機48 tests／20 UI checks PASS，真實client授權仍BLOCKED。 |
+| 1.1.2 | 2026-10-06 | 記錄官方暫停新client核發的外部阻礙與Cloud Run回呼驗證，禁止以假值冒充OAuth接通。 |

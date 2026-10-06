@@ -60,7 +60,7 @@ jobs:
           trap 'docker logs poe-web-validation; docker rm -f poe-web-validation' EXIT
           curl --fail --silent --show-error --retry 15 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/health
           curl --fail --silent --show-error http://127.0.0.1:8080/health/ready
-          python web/validate_site.py --base-url http://127.0.0.1:8080 \
+          python web/scripts/validate_site.py --base-url http://127.0.0.1:8080 \
             --report "$RUNNER_TEMP/site-validation.json" --artifacts-dir "$RUNNER_TEMP/site-screenshots"
           docker save poe-web-validation -o "$RUNNER_TEMP/poe-web-image.tar"
       - uses: actions/upload-artifact@v4
