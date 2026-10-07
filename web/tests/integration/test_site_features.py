@@ -42,6 +42,21 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertIn('id="siteSponsorLink" href="mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Sponsorship"', page)
         self.assertIn("來信洽詢贊助方式", page)
 
+    def test_time_space_totem_build_and_images_load_in_poe2_builds(self):
+        games = web_app.load_games(include_strategies=False)
+        poe2 = next(game for game in games if game["id"] == "poe2")
+        builds = next(category for category in poe2["categories"] if category["name"] == "builds")
+        article = next(document for document in builds["documents"] if document["id"] == "poe2-builds-poe2-time-space-totem")
+        self.assertEqual(article["title"], "POE2 時空法圖騰 v2.0：無限駁斥與閃現")
+        self.assertIn("545 精魂", article["html"])
+        self.assertIn("poe2db.tw/tw/pob/dAm2eamk3W", article["html"])
+        for image in ("poe2-time-space-totem-skills.png", "poe2-time-space-totem-passive-tree.jpg"):
+            self.assertIn(f"/static/poe2/images/{image}", article["html"])
+            response = self.client.get(f"/static/poe2/images/{image}")
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.mimetype.startswith("image/"))
+            response.close()
+
     def test_unused_filter_is_removed_and_beetle_is_a_protected_strategy_subcategory(self):
         with tempfile.TemporaryDirectory() as directory:
             content = Path(directory)

@@ -43,6 +43,7 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 導覽分類 | 舊 Filter 入口不存在；甲蟲位於策略子項，未解鎖不傳送文章，子項解鎖後開啟甲蟲文章 | 保留裝備／拓荒篩選工具；原始 Filter 文件保留但不載入網站分類 |
 | 聯絡／贊助 | 桌機／手機側欄均顯示聯絡及贊助 mailto，收件地址與主旨分別正確 | 贊助方式尚未提供，因此使用 email 詢問，不顯示未核實的付款連結 |
 | 文章 | 公開與解鎖後策略文章逐一開啟、內容非空、圖片解碼 | 不把文章內容或密碼寫入測試報告 |
+| POE2 流派文章 | 時空法圖騰文章在公開流派分類載入；技能與天賦樹圖片皆回 200 並由瀏覽器解碼 | 內容標示來源版本 POE2 0.5/v2.0；原作者傷害與機制回報不當作現行保證 |
 | 策略 | 錯誤密碼、成功解鎖、重新整理後仍解鎖、兩版策略文章、鎖回 | 離線另測設定缺漏、錯誤 JSON、Unicode 密碼、限流與 session key 變更 |
 | 台服物價 | POE1 四類／POE2 三類、game／kind／status、搜尋、排序、分類、重新讀取、現價／歷史價區隔、文字單位與代表物品圖 | unavailable 不可回退到 medianChaos／lastPrice；UI 刷新只重讀 JSON |
 | 台服查價 | 逐一解碼 DOM query，核對已發布官方 type/name/discriminator、遊戲專屬路径、gem_level／quality／corrupted；零品質與 false 不丟失 | canonical 名稱表需精確 match；未知／歧義名稱停用，不能把全名直接塞 type |
@@ -148,3 +149,4 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.1.6 | 2026-10-07 | 新增 POESESSID session 連線 consent／加密／清除與 OAuth 並存驗收；55 項測試、瀏覽器 20 PASS；真實 OAuth 2 與 session-cookie roundtrip 2 BLOCKED。 |
 | 1.1.7 | 2026-10-07 | 加入試算表正則單顆複製、參考文章載入與查價連結格式驗收；保留舊匯率／聯盟／版本快照限制。 |
 | 1.1.8 | 2026-10-07 | 新增 23 條 POE2 查價 `q` payload／聯盟回歸；23 個官方 search 有結果、妄想症 fetch PASS；說明官方回傳筆數限制。 |
+| 1.1.9 | 2026-10-07 | 新增 POE2 時空法圖騰流派文章與兩張原表圖片，加入公開分類、靜態圖片回應及瀏覽器解碼驗收。 |
