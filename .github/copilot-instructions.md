@@ -4,7 +4,7 @@
 
 ## 功能驗證
 
-- 完成網站變更與部署前後，依 `web/docs/VALIDATION.md` 執行離線測試與 `web/scripts/validate_site.py`，檢查各功能、首次載入 icon、圖片解碼、策略解鎖／重整／鎖回、桌機與手機控制項；只測首頁或 `/health` 不算驗收。
+- 一般網站變更依 `PROJECT_RULES.md` CORE-002 與 `web/docs/VALIDATION.md` 按風險分級、合併相鄰小修改後驗收；不要每個微小編輯都重跑完整測試／瀏覽器矩陣。完整 Cloud Run 部署前後仍必須執行全部離線測試與 `web/scripts/validate_site.py` 桌機／手機矩陣，逐項檢查首次載入 icon、圖片解碼、策略解鎖／重整／鎖回及使用者控制項；只測首頁或 `/health` 不算部署驗收。
 - 新發現的缺陷必須補回歸測試／閘門並更新共用驗證文件與記憶。回報 PASS／FAIL／BLOCKED；沒有真實 OAuth client／授權時不得把 fixture 成功當成登入或倉庫同步成功。
 - 部署必要設定包含策略密碼與固定 session key；缺少時停止部署，機密不得寫入回報、文件或倉庫。
 
