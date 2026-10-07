@@ -1,7 +1,7 @@
 # PoE 專案核心規範
 
-- 文件版本：1.0.8
-- 更新日期：2026-10-06
+- 文件版本：1.1.0
+- 更新日期：2026-10-07
 - 適用範圍：本倉庫所有網站、工具、資料集、內容與文件
 - 規範用語：**必須**為合併前要求；**應該**為預設作法，例外需說明原因
 
@@ -133,7 +133,33 @@ graph LR
 - 既有平鋪來源、舊圖片與未使用文章列為相容期；禁止純為美化目錄而大搬移。移動時使用機械搬移保留內容，更新所有 import／mock／相對資源／建置設定，再跑功能測試與頁面驗證，不保留同用途的第二份實作。
 - 驗收濾網：目錄索引與實際檔案一致、查找表可定位該功能、舊模組路徑無殘留程式引用、test discovery 通過、圖片與 OAuth／資料讀取路徑不回歸。缺外部權限仍列 BLOCKED，不把目錄整理當成真實功能已接通。
 
-## CORE-007 之後：規則擴充方式
+## CORE-007：OAuth 與私人帳號資料接入
+
+### 適用範圍
+
+適用於以 OAuth 存取官方帳號資料的網站、工具與整合；官方文件與台服實際支援若有差異，必須標明未驗證部分，不得把國際服政策直接推論為台服政策。
+
+### 必須行為
+
+- 使用者同意與應用註冊是兩個必要條件。OAuth 請求必須帶有效的已註冊 `client_id`；`redirect_uri` 必須與該 client 登記值完全一致。使用者同意不會建立 client，也不會把其他應用的授權碼、token、PKCE verifier 或 secret 授予本站。
+- 網站／Cloud Run 的 OAuth 模式使用由應用負責人控制、可保護憑證的 confidential client；只接受已登記的 HTTPS callback，client secret 僅存於 Secret Manager 或未追蹤的本機設定。Public client 僅適用官方允許的本機 callback／PKCE 流程，不得用 public client 替代 Cloud Run 網站憑證。
+- 使用 Authorization Code + PKCE、不可預測且一次性的 `state`，callback 驗證 state 後立即以同一 client、同一 callback、`code_verifier` 與請求 scope 交換 token。只請求完成功能所需的最小 scope。
+- Access／refresh token 與明確啟用的 POESESSID session 都只能保存於使用者隔離的加密伺服器端儲存；不得送入 URL、日誌、分析或版控。連線 UI 必須說明 session cookie 等同完整登入憑證、會送到本站伺服器及其非官方 endpoint 風險，要求使用者明確勾選同意；斷開時刪除該連線所有憑證與私有快照。
+- 倉庫接入預設官方 OAuth。依使用者明確選擇，可另提供 POESESSID session-cookie 相容模式：只接受 32 位十六進位值、僅 PoE1、固定呼叫已知的 `https://pathofexile.tw/character-window/get-stash-items`，限制分頁數與請求頻率，禁止任意主機／路徑／Cookie 名；不得宣稱此模式是官方 OAuth 或文件化 API，網站需揭露可能違反 GGG 條款及 endpoint 變更風險。
+- 官方 OAuth API 請求使用 `OAuth <client_id>/<version> (contact: <contact>)` 格式的可識別 User-Agent，並尊重 401、403、429 與限流回應。不得借用或重放其他網站的 client credentials／tokens。
+
+### 驗收濾網
+
+- 離線測試覆蓋 OAuth client／callback、state／PKCE、scope／refresh／User-Agent，以及 session cookie 格式／同意閘門／分頁／401／403／429、加密儲存、回應不洩漏及斷開清除。
+- fixture 只證明本地流程與資料契約；真實登入／倉庫同步只有在正式 client、callback、持久儲存已配置並由使用者互動授權後才可標 PASS，否則標 BLOCKED。
+
+### 例外與阻礙
+
+- 官方文件允許的 public client 可不帶 client secret，但仍須有已註冊 `client_id`、遵循 PKCE，並使用該類型允許的本機 callback；不得把此例外用於網站／Cloud Run。
+- session-cookie 模式只按使用者明確選擇啟用，需標記非官方且不保證穩定；不得在 OAuth 流程中暗中回退到 session cookie。使用者未明確同意時不得接收或保存該憑證。
+- 官方 OAuth client 未設定时，不得借用第三方 client。真實 OAuth 與 session endpoint roundtrip 均需由本人在 UI 明確提供相應授權後驗證，fixture 不可冒充真實連線。
+
+## CORE-008 之後：規則擴充方式
 
 - 新規則由使用者提出後，新增下一個編號，包含適用範圍、必須行為、驗收濾網與例外處理；不要覆寫或暗中改變既有核心規則。
 - 每次增修更新文件版本、日期與底部變更紀錄；若規則改變實作慣例，同步修正 README、範本或 agent 指示。
@@ -152,3 +178,5 @@ graph LR
 | 1.0.6 | 2026-10-06 | 新增 CORE-005：逐項功能驗收、圖片解碼、授權狀態、缺陷回歸與 BLOCKED 報告，禁止以 HTTP 200 代替驗收。 |
 | 1.0.7 | 2026-10-06 | 規範官方完整名稱與基底／變體查詢、寶石精確條件、POE2 trade2 路徑及 unavailable 現價不得回退歷史估價。 |
 | 1.0.8 | 2026-10-06 | 新增 CORE-006：功能目錄分類、責任／查找索引、私有資料隔離與漸進搬移驗收，倉庫模組歸到同一套件。 |
+| 1.0.9 | 2026-10-07 | 新增 CORE-007：OAuth client／使用者同意邊界、client 類型、PKCE、token 儲存、官方 API 與 User-Agent 驗收規則。 |
+| 1.1.0 | 2026-10-07 | 依使用者要求加入明確 opt-in POESESSID session-cookie 模式，規定風險揭露、加密隔離、限制 endpoint 與斷開刪除。 |

@@ -305,7 +305,7 @@ def check_stash_dashboard(page, artifacts, viewport_name):
     page.goto('/stash', wait_until='domcontentloaded')
     live_state = page.request.get('/api/stash/state').json()
     require(live_state.get('supported_games') == ['poe1'], 'Unsupported PoE2 stash access must not be presented as working')
-    if not live_state.get('oauth_connected'):
+    if not (live_state.get('oauth_connected') or live_state.get('session_connected')):
         expect(page.locator('#sync')).to_be_disabled()
         expect(page.locator('#total')).to_have_text('—')
     if not live_state.get('oauth_configured'):
@@ -316,13 +316,49 @@ def check_stash_dashboard(page, artifacts, viewport_name):
         expect(page.locator('#connectionDialog')).to_be_visible()
         expect(page.locator('#connectionRequirements')).to_contain_text('POE_TW_CLIENT_ID')
         expect(page.locator('#connectionRequirements')).to_contain_text('POE_TW_CLIENT_SECRET')
-        page.locator('#closeConnectionDialog').click()
+        expect(page.locator('#connectionDialog')).to_contain_text('不是官方 OAuth')
+        expect(page.locator('#sessionCookie')).to_have_attribute('type', 'password')
+        expect(page.locator('#sessionConnect')).to_be_disabled()
+        page.locator('#connectionDialog').get_by_role('button', name='關閉連線設定').click()
+        page.locator('#connect').click()
+        expect(page.locator('#connectionDialog')).to_be_visible()
+        page.locator('#sessionAccount').fill('Fixture session account')
+        fixture_session = 'a' * 32
+        page.locator('#sessionCookie').fill(fixture_session)
+        expect(page.locator('#sessionConnect')).to_be_disabled()
+        page.locator('#sessionConsent').check()
+        expect(page.locator('#sessionConnect')).to_be_enabled()
+        session_posts = []
+
+        def session_connect_fixture(route):
+            session_posts.append(route.request.post_data_json)
+            route.fulfill(json={'status': 'ok', 'stash': {'account_name': 'Fixture session account'}})
+
+        def session_state_fixture(route):
+            if session_posts:
+                route.fulfill(json={
+                    'status': 'ok', 'oauth_configured': False, 'oauth_connected': False,
+                    'session_connected': True, 'connection_mode': 'session-cookie',
+                    'config_error': 'missing+POE_TW_CLIENT_ID', 'supported_games': ['poe1'],
+                    'account_name': 'Fixture session account', 'league': 'test-league',
+                    'updated_at': 1, 'valuation': {'total_divine': 0, 'unpriced_count': 0, 'tabs': [], 'resources': [], 'categories': []},
+                    'selection': {}, 'history': [], 'connection_setup': {'client_id': False, 'client_secret': False, 'registered_callback': True, 'private_storage': True},
+                })
+            else:
+                route.continue_()
+
+        page.route('**/api/stash/session/connect', session_connect_fixture)
+        page.route('**/api/stash/state', session_state_fixture)
+        with page.expect_response('**/api/stash/session/connect'):
+            page.locator('#sessionConnect').click()
         expect(page.locator('#connectionDialog')).not_to_be_visible()
-        expect(page.locator('#sync')).to_be_disabled()
-        with page.expect_navigation(wait_until='domcontentloaded'):
-            page.locator('#connect').click()
-        require(urlsplit(page.url).path == '/stash', 'Incomplete account setup must return to the stash page')
-        expect(page.locator('#notice')).not_to_be_empty()
+        expect(page.locator('#account')).to_have_text('Fixture session account')
+        expect(page.locator('#sync')).to_be_enabled()
+        expect(page.locator('#sessionCookie')).to_have_value('')
+        require(len(session_posts) == 1 and session_posts[0].get('accepted_risk') is True, 'Session connection did not submit explicit consent')
+        require(session_posts[0].get('poe_session') == fixture_session, 'Session connection payload did not include the entered fixture value')
+        page.unroute('**/api/stash/session/connect', session_connect_fixture)
+        page.unroute('**/api/stash/state', session_state_fixture)
     fixture_state = {
         'status': 'ok', 'oauth_configured': True, 'oauth_connected': True, 'config_error': None,
         'account_name': 'Fixture account', 'league': 'test-league', 'updated_at': __import__('time').time(),
@@ -460,6 +496,8 @@ def main():
             run(f"{name}: browser JavaScript errors", lambda: require(not errors, "Browser JavaScript errors: " + "; ".join(errors)))
             state = page.request.get("/api/pricer/stash/state").json()
             results.append({"feature": f"{name}: real OAuth login and authorized stash sync", "status": "BLOCKED", "detail": "Requires a registered OAuth client and an interactive account authorization; not simulated as a successful login", "oauth_configured": state.get("oauth_configured", False)})
+            stash_state = page.request.get("/api/stash/state").json()
+            results.append({"feature": f"{name}: real POESESSID session-cookie stash sync", "status": "BLOCKED", "detail": "Requires the user to submit their session cookie and a live Taiwan stash endpoint roundtrip; no cookie is taken from the browser context or test fixture", "session_connected": stash_state.get("session_connected", False)})
             context.close()
         browser.close()
     report = {"checked_at": datetime.now(timezone.utc).isoformat(), "base_url": args.base_url, "artifacts": str(artifacts), "results": results, "official_trade_samples": official_results}

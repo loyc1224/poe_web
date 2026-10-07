@@ -27,7 +27,8 @@
 - 查價使用版本化官方名稱表，保留傳奇 name/type 與變異寶石 discriminator，帶入寶石等級／品質／腐化；缺少精確對照時不猜。`price: null` 不顯示歷史中位數為現價，有效價格始終保留文字單位。
 - 更新器產生 POE1／POE2 × 通貨／傳奇／寶石，以及 POE1 野獸共七份 JSON；Cloud Run 多實例可共用私有 Cloud Storage。
 - OAuth 倉庫同步、商店篩選及知識文件管理。
-- 左側 POE1「倉庫統計」：官方 OAuth 私人倉庫、分頁／物品勾選、同聯盟資料集估值、分類占比與歷史快照；未知／稀有詞綴不假造價格。正式client、私有持久儲存與真實授權尚待設定，PoE2私人倉庫依官方限制停用。詳見 [`docs/STASH.md`](docs/STASH.md)。
+- 左側 POE1「倉庫統計」：官方 OAuth 或使用者明確 opt-in 的 POESESSID session-cookie 連線、分頁／物品勾選、同聯盟資料集估值、分類占比與歷史快照；未知／稀有詞綴不假造價格。Session 模式是非官方、可能失效且有帳號 session 風險，需使用者主動勾選確認；PoE2 私人倉庫依官方限制停用。詳見 [`docs/STASH.md`](docs/STASH.md)。
+- 倉庫連線有兩種明確模式：官方 OAuth（本站 registered confidential client + PKCE，玩家在官方頁同意）或玩家 opt-in 提供 POESESSID session-cookie。後者不是官方 OAuth，會把完整登入 session 傳至本站並使用未文件化 endpoint；需先確認風險，且僅 PoE1。兩種憑證都按使用者隔離加密保存並可斷開刪除；細節見 [`docs/STASH.md`](docs/STASH.md) 與根目錄 [`PROJECT_RULES.md`](../PROJECT_RULES.md) CORE-007。
 - POE2 傳奇／寶石來源目前回傳空清單，狀態會顯示 unavailable；野獸行情目前只有 POE1 endpoint，不以其他遊戲或聯盟價格代替。
 
 ## 技術堆疊
@@ -216,3 +217,5 @@ python scripts/refresh_tw_currency.py --trade-metadata-only
 | 1.5.0 | 2026-10-06 | 行情與 economy 模組依領域歸包；測試分 unit／integration，更新引用及查找索引。 |
 | 1.6.0 | 2026-10-06 | 將操作腳本與專用文件分別歸入 scripts/、docs/，更新 CI、操作命令及文件連結。 |
 | 1.7.0 | 2026-10-06 | 新增根目錄架構圖與可重用專案骨架，從 README 提供架構入口。 |
+| 1.7.1 | 2026-10-07 | 新增 OAuth／私人帳號資料接入規範，補齊授權碼 scope 與官方 User-Agent，加入成功 callback 測試。 |
+| 1.7.2 | 2026-10-07 | 新增明確 opt-in POESESSID session-cookie 倉庫連線與風險揭露，保留官方 OAuth 模式。 |

@@ -61,6 +61,13 @@
     .setup-row code { overflow-wrap:anywhere; font-size:12px; }
     .setup-row span { white-space:nowrap; }
     .connection-footer { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-top:18px; }
+    .session-warning { margin-top:18px; padding:12px; border-left:3px solid var(--warning); background:#292720; color:#f0dfb0; font-size:12px; line-height:1.6; }
+    .session-form { display:grid; gap:12px; margin-top:14px; }
+    .session-field { display:grid; gap:6px; }
+    .session-field input { width:100%; }
+    .session-consent { display:flex; align-items:flex-start; gap:8px; color:var(--muted); font-size:12px; line-height:1.5; }
+    .session-consent input { margin-top:2px; }
+    #sessionConnect { justify-self:start; }
     .auto { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
     @media(max-width:700px) {
       .page { padding:16px; }
@@ -71,7 +78,6 @@
       h1 { font-size:22px; }
     }
   </style>
-</head>
 <body>
   <main class="page">
     <header class="header">
@@ -106,7 +112,14 @@
     <div class="section-title"><h2 id="connectionTitle">帳號連線設定</h2><button id="closeConnectionDialog" type="button" title="關閉" aria-label="關閉連線設定"><i data-lucide="x"></i></button></div>
     <div class="notice" id="connectionError"></div>
     <div id="connectionRequirements"></div>
-    <div class="connection-footer"><a href="https://www.pathofexile.com/developer/docs/authorization" target="_blank" rel="noopener noreferrer">官方 OAuth 註冊規範 ↗</a><span class="muted">PoE1 · 官方帳號授權</span></div>
+    <div class="session-warning">POESESSID 是完整登入 session，不是官方 OAuth token。送出後會傳到本站伺服器並加密保存，僅用於 PoE1 倉庫同步。此方式呼叫未列於官方 API 文件的網站 endpoint，可能失效或不符合 GGG 條款；只有在你了解並接受風險時才繼續。可隨時斷開並刪除本站保存的資料。</div>
+    <form id="sessionForm" class="session-form">
+      <label class="session-field">Path of Exile 帳號名稱<input id="sessionAccount" name="account_name" autocomplete="username" maxlength="80" required></label>
+      <label class="session-field">POESESSID<input id="sessionCookie" name="poe_session" type="password" autocomplete="off" spellcheck="false" inputmode="text" maxlength="32" pattern="[A-Fa-f0-9]{32}" required></label>
+      <label class="session-consent"><input id="sessionConsent" type="checkbox" required><span>我了解這會把完整登入 session 傳送並加密保存於本站，且使用非官方文件化的倉庫 endpoint。</span></label>
+      <button id="sessionConnect" type="submit" disabled><i data-lucide="key-round"></i>連結並同步</button>
+    </form>
+    <div class="connection-footer"><a href="https://www.pathofexile.com/developer/docs/authorization" target="_blank" rel="noopener noreferrer">官方 OAuth 規範 ↗</a><span class="muted">PoE1 · Session Cookie 模式</span></div>
   </dialog>
   <script>
     if (window.lucide) lucide.createIcons();
@@ -118,7 +131,7 @@
     const element = id => document.getElementById(id);
     const money = value => value == null ? '未估價' : `${Number(value).toLocaleString('zh-Hant', {maximumFractionDigits:4})} d`;
     const create = (tag, text, className) => { const node = document.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
-    const errors = {'missing+POE_TW_CLIENT_ID':'尚未設定本站官方 OAuth client。','missing+POE_TW_CLIENT_SECRET':'尚未設定本站 OAuth client secret。','missing+STASH_STORAGE_BUCKET':'尚未設定正式倉庫持久儲存。','client_redirect_mismatch+poetwpricer':'此 OAuth client 不屬於本站回呼網域。','invalid+POE_TW_REDIRECT_URI':'官方回呼網址設定無效。'};
+    const errors = {'missing+POE_TW_CLIENT_ID':'尚未設定本站官方 OAuth client。','missing+POE_TW_CLIENT_SECRET':'尚未設定本站 OAuth client secret。','missing+STASH_STORAGE_BUCKET':'尚未設定正式倉庫持久儲存。','client_redirect_mismatch+poetwpricer':'你提供的是 poepricer 的 OAuth client，授權只適用於該網站，且回呼固定為 poepricer.com。本站必須使用官方核發給本站的 client，不能轉用別站的授權。','invalid+POE_TW_REDIRECT_URI':'官方回呼網址設定無效。'};
 
     async function loadState() {
       const response = await fetch('/api/stash/state', {cache:'no-store'});
@@ -140,12 +153,14 @@
       } finally { busy = false; renderControls(); }
     }
     function renderControls() {
-      element('sync').disabled = busy || !state.oauth_connected || !state.oauth_configured;
-      element('disconnect').disabled = busy || (!state.oauth_connected && !state.valuation);
-      element('autoSync').disabled = busy || !state.oauth_connected || !state.oauth_configured;
+      const connected = state.oauth_connected || state.session_connected;
+      element('sync').disabled = busy || !connected;
+      element('disconnect').disabled = busy || (!connected && !state.valuation);
+      element('autoSync').disabled = busy || !connected;
       element('connect').removeAttribute('aria-disabled');
-      element('connectLabel').textContent = '連結帳號';
-      element('connect').title = '透過官方 OAuth 連結帳號';
+      element('connectLabel').textContent = state.session_connected ? '已使用 Session 連結' : '連結帳號';
+      element('connect').title = state.oauth_configured ? '透過官方 OAuth 連結帳號' : '使用 POESESSID 連結帳號';
+      element('sessionConnect').disabled = busy || !element('sessionConsent').checked;
       for (const id of ['allTabs','clearTabs']) element(id).disabled = busy || !(state.valuation?.tabs?.length);
       for (const checkbox of document.querySelectorAll('#tabs input,#rows input')) checkbox.disabled = busy;
     }
@@ -155,12 +170,19 @@
     function selectedTabs() { return (state.valuation?.tabs || []).filter(tab => tab.included).map(tab => tab.id); }
     function excludedItems() { return state.selection?.excluded_items || []; }
     function render() {
-      element('account').textContent = state.account_name || (state.oauth_connected ? '已連結，尚未同步' : '未連結帳號');
-      element('updated').textContent = state.updated_at ? `已同步 · ${new Date(state.updated_at*1000).toLocaleString('zh-TW')}` : '尚未同步';
+      const connected = state.oauth_connected || state.session_connected;
+      element('account').textContent = state.account_name || (connected ? '已連結，尚未同步' : '未連結帳號');
+      const syncTime = state.updated_at ? `已同步 · ${new Date(state.updated_at*1000).toLocaleString('zh-TW')}` : '尚未同步';
+      element('updated').textContent = state.session_connected ? `${syncTime} · POESESSID` : syncTime;
       if (!element('league').value && state.league) element('league').value = state.league;
       const authorization = new URLSearchParams(window.location.search);
       const authorizationError = authorization.get('oauth') === 'error' ? authorization.get('message') : '';
-      element('notice').textContent = errors[state.config_error] || errors[authorizationError] || (authorizationError ? `官方授權未完成：${authorizationError}` : '');
+      const authorizationMessage = authorizationError === 'missing+POE_TW_CLIENT_ID'
+        ? '未開啟官方授權：本站尚未設定已註冊的 OAuth client ID。'
+        : errors[authorizationError] || (authorizationError ? `官方授權未完成：${authorizationError}` : '');
+      element('notice').textContent = state.session_connected
+        ? '目前使用 POESESSID session-cookie 模式；此方式不是官方 OAuth。'
+        : authorizationError ? authorizationMessage : errors[state.config_error] || '';
       element('unknown').textContent = state.valuation ? `${state.valuation.unpriced_count} 件未估價` : '';
       element('total').textContent = state.valuation ? money(state.valuation.total_divine) : '—';
       renderTabs(); renderCategories(); renderRows(); renderChart(); renderControls();
@@ -229,8 +251,10 @@
         },
       });
     }
-    element('connectionSettings').onclick=()=>{
-      element('connectionError').textContent=errors[state.config_error] || '帳號連線設定尚未完成。';
+    function openConnectionDialog() {
+      element('connectionError').textContent=state.config_error === 'missing+POE_TW_CLIENT_ID'
+        ? '本站 OAuth client 尚未設定；可使用下方 POESESSID session 模式連結。'
+        : errors[state.config_error] || '帳號連線設定尚未完成。';
       element('connectionRequirements').replaceChildren();
       for(const [key,label] of [['client_id','POE_TW_CLIENT_ID'],['client_secret','POE_TW_CLIENT_SECRET'],['registered_callback','POE_TW_REDIRECT_URI'],['private_storage','私有倉庫儲存']]) {
         const row=create('div',null,'setup-row'); const configured=Boolean(state.connection_setup?.[key]);
@@ -238,8 +262,31 @@
         element('connectionRequirements').append(row);
       }
       element('connectionDialog').showModal();
-    };
+    }
+    element('connect').onclick=event=>{if(!state.oauth_configured){event.preventDefault();openConnectionDialog();}};
+    element('connectionSettings').onclick=openConnectionDialog;
     element('closeConnectionDialog').onclick=()=>element('connectionDialog').close();
+    element('sessionConsent').onchange=renderControls;
+    element('sessionForm').onsubmit=async event=>{
+      event.preventDefault();
+      if(busy || !element('sessionConsent').checked) return;
+      busy=true; renderControls(); element('connectionError').textContent='正在驗證並同步…';
+      const payload={account_name:element('sessionAccount').value.trim(),poe_session:element('sessionCookie').value,game:'poe1',league:element('league').value,accepted_risk:true};
+      try {
+        const response=await fetch('/api/stash/session/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        const result=await response.json();
+        if(!response.ok) throw new Error(result.message || 'Session 連結失敗');
+        history.replaceState(null,'',window.location.pathname);
+        element('connectionDialog').close();
+        await loadState();
+        element('notice').textContent='倉庫已同步。連線使用 POESESSID session-cookie，非官方 OAuth。';
+      } catch(error) {
+        element('connectionError').textContent=error.message;
+      } finally {
+        element('sessionCookie').value='';
+        busy=false; renderControls();
+      }
+    };
     element('sync').onclick=()=>action('/api/stash/sync',{game:'poe1',league:element('league').value});
     element('disconnect').onclick=()=>{ if (confirm('斷開帳號並清除本站倉庫資料？')) action('/api/stash/disconnect',{}); };
     element('allTabs').onclick=()=>selection((state.valuation?.tabs || []).map(tab=>tab.id),excludedItems());

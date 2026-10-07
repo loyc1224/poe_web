@@ -30,7 +30,7 @@ from monitor.economy.translations import ITEM_ZH
 from monitor.tw_pricer.tw_pricer_client import load_tw_price_dataset, load_tw_price_navigation_icons
 from monitor.tw_pricer.tw_pricer_source import refresh_all_tw_prices
 from monitor.stash.store import StashStore
-from monitor.stash.client import StashApiError, fetch_account_stashes
+from monitor.stash.client import StashApiError, build_oauth_user_agent, fetch_account_stashes, fetch_account_stashes_with_session
 from monitor.stash.pricer import value_stashes, flatten_stash_items
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -349,6 +349,7 @@ def _save_tokens(token_payload: dict, initial_authorization=False) -> None:
         data = {}
     if subject:
         data["subject"] = subject
+    data.pop("session_auth", None)
     previous = data.get("tokens", {})
     data["tokens"] = {
         "access_token": token_payload.get("access_token", ""),
@@ -384,7 +385,7 @@ def _refresh_access_token(refresh_token: str) -> dict:
             "refresh_token": refresh_token,
         },
         timeout=12,
-        headers={"Accept": "application/json"},
+        headers={"Accept": "application/json", "User-Agent": build_oauth_user_agent(OAUTH_CLIENT_ID)},
     )
     if token_resp.status_code >= 400:
         raise RuntimeError(f"refresh token failed: {token_resp.status_code}")
@@ -513,11 +514,37 @@ def _sync_stash_with_token(access_token: str, game: str, league: str) -> dict:
         raise StashApiError(503, "Configure persistent private stash storage before syncing")
     data = _stash_data()
     try:
-        fetched = fetch_account_stashes(access_token, game, league)
+        fetched = fetch_account_stashes(access_token, game, league, OAUTH_CLIENT_ID)
     except StashApiError as error:
         if error.status == 401:
             _clear_tokens()
         raise
+    return _persist_fetched_stash(fetched, game, league, "official-oauth")
+
+
+def _clear_session_auth() -> None:
+    owner = _stash_owner()
+    if not owner:
+        return
+    data = _stash_data()
+    data.pop("session_auth", None)
+    _stash_store().save(owner, data)
+
+
+def _sync_stash_with_session(session_auth: dict, game: str, league: str) -> dict:
+    if not _stash_storage_ready():
+        raise StashApiError(503, "Configure persistent private stash storage before syncing")
+    try:
+        fetched = fetch_account_stashes_with_session(session_auth["poe_session"], session_auth["account_name"], game, league)
+    except StashApiError as error:
+        if error.status == 401:
+            _clear_session_auth()
+        raise
+    return _persist_fetched_stash(fetched, game, league, "session-cookie", session_auth)
+
+
+def _persist_fetched_stash(fetched: dict, game: str, league: str, source: str, session_auth: dict | None = None) -> dict:
+    data = _stash_data()
     datasets = _stash_datasets(game, league)
     selection = data.get("selection", {}) if data.get("league") == league and data.get("game") == game else {}
     stable_ids = {str(item["id"]) for tab in fetched["tabs"] for item in flatten_stash_items(tab.get("items")) if item.get("id")}
@@ -528,8 +555,12 @@ def _sync_stash_with_token(access_token: str, game: str, league: str) -> dict:
     history = data.get("history", [])[-199:]
     history.append({"created_at": updated_at, "total_divine": result["total_divine"], "unpriced_count": result["unpriced_count"], "game": game, "league": league, "selection_key": _stash_selection_key(data)})
     data["history"] = history
-    _stash_store().save(_stash_owner(), data)
-    return {**result, "account_name": fetched["account_name"], "updated_at": updated_at, "source": "official-oauth"}
+    if session_auth is not None:
+        data.pop("tokens", None)
+        data.pop("subject", None)
+        data["session_auth"] = session_auth
+    _stash_store().save(_stash_owner(create=True), data)
+    return {**result, "account_name": fetched["account_name"], "updated_at": updated_at, "source": source}
 
 
 def _stash_datasets(game, league):
@@ -884,7 +915,35 @@ def stash_dashboard_state():
         "registered_callback": bool(OAUTH_REDIRECT_URI),
         "private_storage": _stash_storage_ready(),
     }
-    return {"status": "ok", "oauth_configured": config_error is None, "oauth_connected": bool(data.get("tokens", {}).get("access_token")), "config_error": config_error, "connection_setup": connection_setup, "supported_games": ["poe1"], "account_name": data.get("account_name", ""), "league": data.get("league") or league, "updated_at": data.get("updated_at"), "valuation": data.get("valuation"), "selection": data.get("selection", {}), "history": history, "storage": "private-gcs" if os.getenv("STASH_STORAGE_BUCKET") else "local-encrypted-sqlite"}
+    session_auth = data.get("session_auth", {})
+    session_connected = bool(session_auth.get("poe_session") and session_auth.get("account_name"))
+    return {"status": "ok", "oauth_configured": config_error is None, "oauth_connected": bool(data.get("tokens", {}).get("access_token")), "session_connected": session_connected, "connection_mode": "session-cookie" if session_connected else "oauth" if data.get("tokens", {}).get("access_token") else None, "config_error": config_error, "connection_setup": connection_setup, "supported_games": ["poe1"], "account_name": data.get("account_name", ""), "league": data.get("league") or league, "updated_at": data.get("updated_at"), "valuation": data.get("valuation"), "selection": data.get("selection", {}), "history": history, "storage": "private-gcs" if os.getenv("STASH_STORAGE_BUCKET") else "local-encrypted-sqlite"}
+
+
+@app.route("/api/stash/session/connect", methods=["POST"])
+def stash_session_connect():
+    payload = request.get_json()
+    account_name = payload.get("account_name")
+    poe_session = payload.get("poe_session")
+    game = payload.get("game", "poe1")
+    league = payload.get("league")
+    if payload.get("accepted_risk") is not True:
+        return {"status": "error", "message": "Confirm the session-cookie access warning before connecting"}, 400
+    if game != "poe1":
+        return {"status": "unavailable", "message": "Session-cookie stash access currently supports PoE1 only"}, 409
+    if not isinstance(league, str) or not league.strip() or len(league) > 100:
+        return {"status": "error", "message": "Choose a league"}, 400
+    if not isinstance(account_name, str) or not account_name.strip() or len(account_name) > 80 or any(ord(character) < 32 for character in account_name):
+        return {"status": "error", "message": "Enter a valid Path of Exile account name"}, 400
+    session_auth = {"account_name": account_name.strip(), "poe_session": poe_session}
+    with _stash_lock:
+        try:
+            result = _sync_stash_with_session(session_auth, game, league.strip())
+        except StashApiError as error:
+            return {"status": "error", "message": str(error)}, error.status
+        except (ValueError, FileNotFoundError) as error:
+            return {"status": "unavailable", "message": str(error)}, 409
+    return {"status": "ok", "stash": result}
 
 
 @app.route("/api/stash/sync", methods=["POST"])
@@ -897,9 +956,19 @@ def stash_dashboard_sync():
     if not isinstance(league, str) or not league.strip() or len(league) > 100:
         return {"status": "error", "message": "Choose a league"}, 400
     with _stash_lock:
+        data = _stash_data()
+        session_auth = data.get("session_auth")
+        if session_auth:
+            try:
+                result = _sync_stash_with_session(session_auth, game, league.strip())
+            except StashApiError as error:
+                return {"status": "error", "message": str(error)}, error.status
+            except (ValueError, FileNotFoundError) as error:
+                return {"status": "unavailable", "message": str(error)}, 409
+            return {"status": "ok", "stash": result}
         token = _get_valid_access_token()
         if not token:
-            return {"status": "error", "message": "Connect the official account before syncing"}, 401
+            return {"status": "error", "message": "Connect an account before syncing"}, 401
         try:
             result = _sync_stash_with_token(token, game, league.strip())
         except StashApiError as error:
@@ -1100,10 +1169,11 @@ def pricer_oauth_callback():
                 "client_secret": OAUTH_CLIENT_SECRET,
                 "code": code,
                 "redirect_uri": redirect_uri,
+                "scope": OAUTH_SCOPE,
                 "code_verifier": verifier,
             },
             timeout=12,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", "User-Agent": build_oauth_user_agent(OAUTH_CLIENT_ID)},
         )
         if token_resp.status_code >= 400:
             return _oauth_error_redirect(f"token exchange failed {token_resp.status_code}")

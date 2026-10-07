@@ -173,6 +173,19 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.location.startswith("/stash?oauth=error&"))
         self.assertNotIn("pathofexile.tw/oauth/authorize", response.location)
+        page = self.client.get(response.location)
+        self.assertIn("未開啟官方授權：本站尚未設定已註冊的 OAuth client ID。", page.get_data(as_text=True))
+
+    def test_poepricer_client_cannot_be_reused_for_this_site(self):
+        from urllib.parse import parse_qs, urlsplit
+
+        with patch.object(web_app, "OAUTH_CLIENT_ID", "poetwpricer"), patch.object(web_app, "OAUTH_CLIENT_SECRET", "fixture-client-secret"), patch.object(web_app, "OAUTH_REDIRECT_URI", "https://example.org/callback"):
+            response = self.client.get("/api/pricer/oauth/start?return_to=stash", base_url="https://example.org")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(parse_qs(urlsplit(response.location).query)["message"], ["client_redirect_mismatch+poetwpricer"])
+        self.assertEqual(urlsplit(response.location).path, "/stash")
+        self.assertNotIn("pathofexile.tw/oauth/authorize", response.location)
+        self.assertIn("授權只適用於該網站", self.client.get("/stash").get_data(as_text=True))
 
     def test_failed_oauth_token_exchange_returns_to_originating_stash_page(self):
         from urllib.parse import parse_qs, urlsplit
@@ -185,6 +198,43 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(urlsplit(response.location).path, "/stash")
         self.assertEqual(parse_qs(urlsplit(response.location).query)["message"], ["token exchange failed 400"])
+
+    def test_successful_oauth_callback_exchanges_pkce_code_with_requested_scope(self):
+        from urllib.parse import parse_qs, urlsplit
+
+        token_payload = {"access_token": "fixture-access-token", "refresh_token": "fixture-refresh-token", "expires_in": 3600, "sub": "fixture-account"}
+        with patch.object(web_app, "OAUTH_CLIENT_ID", "registered-fixture-client"), patch.object(web_app, "OAUTH_CLIENT_SECRET", "fixture-server-secret"), patch.object(web_app, "OAUTH_REDIRECT_URI", "https://example.org/callback"):
+            start = self.client.get("/api/pricer/oauth/start?return_to=stash", base_url="https://example.org")
+            state = parse_qs(urlsplit(start.location).query)["state"][0]
+            with patch("requests.post", return_value=Mock(status_code=200, json=Mock(return_value=token_payload))) as exchange:
+                response = self.client.get("/callback", query_string={"state": state, "code": "fixture-code"}, base_url="https://example.org")
+        self.assertEqual(urlsplit(response.location).path, "/stash")
+        self.assertEqual(parse_qs(urlsplit(response.location).query), {"oauth": ["connected"]})
+        request_data = exchange.call_args.kwargs["data"]
+        self.assertEqual(request_data["client_id"], "registered-fixture-client")
+        self.assertEqual(request_data["client_secret"], "fixture-server-secret")
+        self.assertEqual(request_data["code"], "fixture-code")
+        self.assertEqual(request_data["redirect_uri"], "https://example.org/callback")
+        self.assertEqual(request_data["scope"], "account:profile account:stashes")
+        self.assertTrue(request_data["code_verifier"])
+        self.assertTrue(exchange.call_args.kwargs["headers"]["User-Agent"].startswith("OAuth registered-fixture-client/1.0.0 (contact: "))
+        state_response = self.client.get("/api/stash/state", base_url="https://example.org")
+        self.assertTrue(state_response.json["oauth_connected"])
+        self.assertNotIn("fixture-access-token", state_response.get_data(as_text=True))
+
+    def test_refresh_oauth_token_uses_registered_client_and_user_agent(self):
+        token_payload = {"access_token": "fixture-refreshed-token", "refresh_token": "fixture-next-refresh-token", "expires_in": 3600, "sub": "fixture-account"}
+        with patch.object(web_app, "OAUTH_CLIENT_ID", "registered-fixture-client"), patch.object(web_app, "OAUTH_CLIENT_SECRET", "fixture-server-secret"):
+            with patch("requests.post", return_value=Mock(status_code=200, json=Mock(return_value=token_payload))) as refresh:
+                with web_app.app.test_request_context():
+                    result = web_app._refresh_access_token("fixture-refresh-token")
+        self.assertEqual(result["access_token"], "fixture-refreshed-token")
+        request_data = refresh.call_args.kwargs["data"]
+        self.assertEqual(request_data["grant_type"], "refresh_token")
+        self.assertEqual(request_data["client_id"], "registered-fixture-client")
+        self.assertEqual(request_data["client_secret"], "fixture-server-secret")
+        self.assertEqual(request_data["refresh_token"], "fixture-refresh-token")
+        self.assertTrue(refresh.call_args.kwargs["headers"]["User-Agent"].startswith("OAuth registered-fixture-client/1.0.0 (contact: "))
 
     def test_stash_dashboard_is_private_and_does_not_expose_legacy_global_tokens(self):
         page = self.client.get("/stash")
@@ -243,6 +293,29 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertEqual(len(web_app._stash_store().load(owner)["history"]), 1)
         self.assertEqual(self.client.post("/api/stash/disconnect", json={}).status_code, 200)
         self.assertIsNone(self.client.get("/api/stash/state").json["valuation"])
+
+    def test_session_cookie_connection_requires_consent_encrypts_and_disconnects(self):
+        session_cookie = "a" * 32
+        dataset = {"game": "poe1", "league": "test-league", "status": "ok", "items": [{"name": "Divine Orb", "price": {"unit": "divine", "amount": 1}}]}
+        fetched = {"account_name": "Account A", "game": "poe1", "league": "test-league", "tabs": [{"id": "tab-1", "name": "Currency", "items": [{"id": "item-1", "typeLine": "Divine Orb", "stackSize": 2}]}]}
+        payload = {"account_name": "Account A", "poe_session": session_cookie, "game": "poe1", "league": "test-league"}
+        self.assertEqual(self.client.post("/api/stash/session/connect", json=payload).status_code, 400)
+        with patch.object(web_app, "fetch_account_stashes_with_session", return_value=fetched) as fetch_session, patch.object(web_app, "_stash_datasets", return_value={"currency": dataset}):
+            connected = self.client.post("/api/stash/session/connect", json={**payload, "accepted_risk": True})
+            self.assertEqual(connected.status_code, 200)
+            self.assertEqual(connected.json["stash"]["source"], "session-cookie")
+            self.assertEqual(fetch_session.call_args.args, (session_cookie, "Account A", "poe1", "test-league"))
+            state = self.client.get("/api/stash/state")
+            self.assertTrue(state.json["session_connected"])
+            self.assertEqual(state.json["connection_mode"], "session-cookie")
+            self.assertNotIn(session_cookie, state.get_data(as_text=True))
+            self.assertNotIn(session_cookie.encode(), web_app.STASH_DB.read_bytes())
+            synced = self.client.post("/api/stash/sync", json={"game": "poe1", "league": "test-league"})
+            self.assertEqual(synced.status_code, 200)
+            self.assertEqual(fetch_session.call_count, 2)
+            self.assertEqual(self.client.post("/api/stash/disconnect", json={}).status_code, 200)
+        self.assertFalse(self.client.get("/api/stash/state").json["session_connected"])
+        self.assertNotIn(session_cookie.encode(), web_app.STASH_DB.read_bytes())
 
     def test_connecting_a_different_account_clears_the_previous_account_snapshot(self):
         owner = "owner_a_01234567890123456789"

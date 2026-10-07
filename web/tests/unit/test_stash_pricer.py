@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from monitor.stash.pricer import value_stashes
-from monitor.stash.client import StashApiError, fetch_account_stashes
+from monitor.stash.client import StashApiError, fetch_account_stashes, fetch_account_stashes_with_session
 from monitor.stash.store import StashStore
 
 
@@ -97,15 +97,16 @@ class StashConnectionTests(unittest.TestCase):
         payloads = [{"name": "Account A"}, {"stashes": [{"id": "tab-1", "name": "Currency", "type": "CurrencyStash"}]}, {"stash": {"id": "tab-1", "items": [{"id": "item-1", "typeLine": "Divine"}]}}]
         responses = [Mock(ok=True, status_code=200, json=Mock(return_value=payload)) for payload in payloads]
         with patch("monitor.stash.client.requests.get", side_effect=responses) as get:
-            result = fetch_account_stashes("fixture-token", "poe1", "test league")
+            result = fetch_account_stashes("fixture-token", "poe1", "test league", "fixture-client")
         self.assertEqual(result["account_name"], "Account A")
         self.assertEqual([call.args[0] for call in get.call_args_list], ["https://api.pathofexile.com/profile", "https://api.pathofexile.com/stash/test%20league", "https://api.pathofexile.com/stash/test%20league/tab-1"])
+        self.assertEqual(get.call_args_list[0].kwargs["headers"]["User-Agent"], "OAuth fixture-client/1.0.0 (contact: https://github.com/loyc1224/poe_web/issues) poe-web/stash")
         self.assertEqual(len(result["tabs"][0]["items"]), 1)
 
     def test_poe2_is_not_misrepresented_as_supported(self):
         with patch("monitor.stash.client.requests.get") as get:
             with self.assertRaises(StashApiError) as error:
-                fetch_account_stashes("fixture-token", "poe2", "test-league")
+                fetch_account_stashes("fixture-token", "poe2", "test-league", "fixture-client")
         self.assertEqual(error.exception.status, 409)
         get.assert_not_called()
 
@@ -113,7 +114,7 @@ class StashConnectionTests(unittest.TestCase):
         for status in (401, 403, 429):
             with self.subTest(status=status), patch("monitor.stash.client.requests.get", return_value=Mock(status_code=status, ok=False)):
                 with self.assertRaises(StashApiError) as error:
-                    fetch_account_stashes("private-fixture-token", "poe1", "test-league")
+                    fetch_account_stashes("private-fixture-token", "poe1", "test-league", "fixture-client")
                 self.assertEqual(error.exception.status, status)
                 self.assertNotIn("private-fixture-token", str(error.exception))
 
@@ -122,15 +123,54 @@ class StashConnectionTests(unittest.TestCase):
         responses = [Mock(ok=True, status_code=200, json=Mock(return_value=payload)) for payload in payloads]
         with patch("monitor.stash.client.requests.get", side_effect=responses):
             with self.assertRaises(StashApiError) as error:
-                fetch_account_stashes("fixture-token", "poe1", "test-league")
+                fetch_account_stashes("fixture-token", "poe1", "test-league", "fixture-client")
         self.assertEqual(error.exception.status, 409)
 
     def test_nullable_official_children_and_items_are_treated_as_empty(self):
         payloads = [{"name": "Account A"}, {"stashes": [{"id": "tab-1", "children": None}]}, {"stash": {"id": "tab-1", "items": None}}]
         responses = [Mock(ok=True, status_code=200, json=Mock(return_value=payload)) for payload in payloads]
         with patch("monitor.stash.client.requests.get", side_effect=responses):
-            result = fetch_account_stashes("fixture-token", "poe1", "test-league")
+            result = fetch_account_stashes("fixture-token", "poe1", "test-league", "fixture-client")
         self.assertEqual(result["tabs"][0]["items"], [])
+
+    def test_session_stash_client_uses_cookie_header_and_fetches_each_tab(self):
+        tabs = [
+            {"id": "currency-tab", "n": "Currency", "type": "CurrencyStash", "i": 0, "colour": {"r": 1, "g": 2, "b": 3}},
+            {"id": "fragment-tab", "n": "Fragments", "type": "FragmentStash", "i": 1},
+        ]
+        responses = [
+            Mock(ok=True, status_code=200, json=Mock(return_value={"tabs": tabs, "items": [{"id": "item-1", "typeLine": "Divine Orb", "stackSize": 2}]})),
+            Mock(ok=True, status_code=200, json=Mock(return_value={"tabs": tabs, "items": [{"id": "item-2", "typeLine": "Splinter", "stackSize": 3}]})),
+        ]
+        session_cookie = "a" * 32
+        with patch("monitor.stash.client.requests.get", side_effect=responses) as get:
+            result = fetch_account_stashes_with_session(session_cookie, "Account Name", "poe1", "Standard")
+        self.assertEqual(result["account_name"], "Account Name")
+        self.assertEqual([tab["name"] for tab in result["tabs"]], ["Currency", "Fragments"])
+        self.assertEqual(result["tabs"][1]["items"][0]["typeLine"], "Splinter")
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(get.call_args_list[0].args[0], "https://pathofexile.tw/character-window/get-stash-items?league=Standard&accountName=Account+Name&tabs=1&tabIndex=0")
+        for call in get.call_args_list:
+            self.assertEqual(call.kwargs["headers"]["Cookie"], f"POESESSID={session_cookie}")
+            self.assertNotIn(session_cookie, call.args[0])
+            self.assertFalse(call.kwargs["allow_redirects"])
+        self.assertNotIn(session_cookie, repr(result))
+
+    def test_session_stash_client_rejects_invalid_cookie_before_network_request(self):
+        with patch("monitor.stash.client.requests.get") as get:
+            with self.assertRaises(StashApiError) as error:
+                fetch_account_stashes_with_session("not-a-session", "Account", "poe1", "Standard")
+        self.assertEqual(error.exception.status, 400)
+        get.assert_not_called()
+
+    def test_session_stash_client_maps_expired_cookie_and_rate_limit(self):
+        session_cookie = "b" * 32
+        for status, expected in ((401, 401), (403, 401), (429, 429)):
+            with self.subTest(status=status), patch("monitor.stash.client.requests.get", return_value=Mock(status_code=status, ok=False)):
+                with self.assertRaises(StashApiError) as error:
+                    fetch_account_stashes_with_session(session_cookie, "Account", "poe1", "Standard")
+            self.assertEqual(error.exception.status, expected)
+            self.assertNotIn(session_cookie, str(error.exception))
 
 
 if __name__ == "__main__":

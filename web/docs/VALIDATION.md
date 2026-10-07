@@ -49,9 +49,9 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 篩選 | POE1 裝備、POE2 商店／換界石，選取、清除、換界石重置、POE1 tabs | 每組工具有獨立 selector，空選取與剪貼簿權限分開測試 |
 | 複製 | 剪貼簿拒絕有錯誤狀態；允許時逐字比對已複製字串 | 無未處理 Promise／pageerror |
 | 舊查價頁 | 兩版切換、搜尋、排序、強制刷新參數，以 deterministic fixture 驗 UI | **不代表外部 poe.ninja 真實刷新或價格正確性已驗證** |
-| OAuth／倉庫 | 離線驗設定缺漏、無效 callback、未登入的 state／sync／resources 邊界 | 真實登入與成功同步需正式 client、callback 及使用者授權；目前 BLOCKED |
-| 新倉庫統計 | 未登入總值—／停用同步，fixture分頁／物品選取、搜尋排序、分類占比、歷史圖、空分頁、圖片解碼與JS錯誤 | fixture不是真實帳號資產；台服OAuth與Cloud Run私有持久儲存仍BLOCKED，詳見STASH.md |
-| 連結帳號 | 主動作保持可點，走官方OAuth後端；獨立齒輪顯示缺設定；unit驗真正302官方URL／PKCE／scope／回呼／Secret不出URL，缺設定與交換失敗回原倉庫頁 | 註冊client缺漏時不能真實授權，不攔截成診斷也不借用他站client；不是解除按鈕灰色就算登入成功 |
+| OAuth／倉庫 | OAuth fixture 驗 PKCE／scope／token 隔離；session fixture 驗 cookie 格式、台服 endpoint、頁籤、401／403／429、session 不外洩、加密保存與斷開清除 | Fixture 不是真實帳號；OAuth 需本站 client；session roundtrip 需玩家自行輸入後才可列真實 PASS |
+| 新倉庫統計 | OAuth／session-connected 與未登入狀態、分頁／物品選取、搜尋排序、分類占比、歷史圖、空分頁、圖片解碼與 JS 錯誤 | Fixture 不是真實帳號資產；session endpoint 非官方文件 API，尚無真實 session roundtrip 證據時標 BLOCKED |
+| 連結帳號 | OAuth 設定完整時直達官方；缺 client 時提供 session-cookie 對話框；密碼欄遮蔽、風險未確認不可提交、確認後同步、斷開清除；OAuth PKCE／scope／callback regression | POESESSID 是完整登入 session，需醒目揭露；fixture 不得冒充真實連線；session endpoint 不保證穩定 |
 | 流量／圖片代理 | 離線驗 API 回應、代理路徑白名單、來源與回應型別 | 無上游連線的離線測試不代表所有遠端圖片一定可用 |
 | 桌機／手機 | 1440×1000、390×844，各項操作、JS 錯誤與截圖 | 實作者須看截圖，不能只確認產生了檔案 |
 
@@ -86,6 +86,8 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 2026-10-06 | 分頁／物品選取改變可能造成假歷史漲跌，插槽物品可能漏算 | 快照依相同選取範圍過濾；官方物品ID去重，socketedItems／null stackSize與缺ID勾選回歸 |
 | 2026-10-06 | 連結帳號被前端攔截成診斷、授權失敗跳舊查價頁；倉庫模組平鋪難定位 | 正常連結走官方OAuth，診斷拆齒輪，返回原頁；倉庫模組歸到monitor/stash/，更新import／mock、CORE-006與根查找索引 |
 | 2026-10-06 | 未先確認官方受理狀態就把註冊client當成可立即完成，後又把國際服公告直接套用台服 | 國際服Getting Started暫停新申請，但台服政策尚未確認；使用者授權紀錄證明既有台服應用存在。需台服官方確認本站核發途徑／回呼／API，不能推論既有應用是最近核發或借用其client |
+| 2026-10-07 | OAuth code exchange 未送出授權 scope，官方 API User-Agent 未識別 registered client/contact | token exchange 加回 scope；refresh/token/stash requests 統一使用官方 OAuth User-Agent，fixture 驗 PKCE／callback／scope／header／token 不外洩 |
+| 2026-10-07 | OAuth client 未設定時玩家無法連線；使用者指定增加 POESESSID session 模式 | 新增明確風險勾選、32 位格式檢查、固定 endpoint、250ms 最小請求間隔、加密 per-connection 儲存、同步與斷開清除；尚未使用真實 POESESSID roundtrip |
 | 2026-10-06 | economy／台服行情模組與測試平鋪，新增功能難依責任定位 | 模組歸類至 `monitor/economy/`、`monitor/tw_pricer/`；測試分 `tests/unit/`、`tests/integration/`；全量 unittest discovery 48 PASS、舊路徑搜尋無殘留，桌機／手機各 10 項 PASS |
 | 2026-10-06 | Web根目錄散落部署／更新／驗證腳本與多份操作Markdown | 腳本移至 `scripts/`、專用手冊移至 `docs/`；修正 CI／命令／匯入根路徑；CLI `--help`、PowerShell parser、完整測試與瀏覽器矩陣做提交前驗證 |
 | 2026-10-06 | 架構文件與目錄整理提交後依使用者要求部署 | commit `d784208` 部署至 `poe-python-web-00044-gd4`，Ready／100%流量；48 tests PASS，正式站桌機／手機20 checks PASS，真實 OAuth 各 1 BLOCKED；readiness PASS，未修改排程 |
@@ -136,3 +138,7 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.1.0 | 2026-10-06 | 新增倉庫安全／估值回歸，本機與容器45 tests／20 UI checks PASS，真實台服OAuth與持久儲存仍BLOCKED，未部署此功能。 |
 | 1.1.1 | 2026-10-06 | 帳號按鈕與官方OAuth導覽／失敗返回回歸、功能套件歸類；本機48 tests／20 UI checks PASS，真實client授權仍BLOCKED。 |
 | 1.1.2 | 2026-10-06 | 記錄官方暫停新client核發的外部阻礙與Cloud Run回呼驗證，禁止以假值冒充OAuth接通。 |
+| 1.1.3 | 2026-10-07 | 新增 poepricer client 無法轉授權給本站的回歸案例與連結帳號驗收條件。 |
+| 1.1.4 | 2026-10-07 | 51 項離線測試 PASS；驗證 PKCE callback／refresh grant 的 scope、User-Agent、伺服器端 token 隔離。瀏覽器 20 PASS，真實 OAuth 桌機／手機 2 BLOCKED。 |
+| 1.1.5 | 2026-10-07 | 新增桌機／手機「點擊但缺 client」明確錯誤提示驗收，避免回同頁看似無反應。 |
+| 1.1.6 | 2026-10-07 | 新增 POESESSID session 連線 consent／加密／清除與 OAuth 並存驗收；55 項測試、瀏覽器 20 PASS；真實 OAuth 2 與 session-cookie roundtrip 2 BLOCKED。 |

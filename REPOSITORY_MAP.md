@@ -58,8 +58,8 @@ poe_web/
 |---|---|---|---|
 | 首頁與文章／策略密碼 | `web/app.py` 的 home／load_games／strategy API | `templates/index.html`、`content/poe1/`／`poe2/`；密碼為私有env／Secret | `tests/integration/test_site_features.py`、`docs/VALIDATION.md` |
 | 台服行情、完整查價名稱 | `monitor/tw_pricer/tw_pricer_client.py`／`tw_pricer_source.py`、`scripts/refresh_tw_currency.py` | `templates/index.html`、`cache/tw_<kind>_<game>.json` | `tests/unit/test_tw_price_datasets.py`、`README.md`／`docs/VALIDATION.md` |
-| 倉庫帳號授權與API | `web/app.py` 的 oauth／stash API、`monitor/stash/client.py` | `templates/stash.html`；cookie為私有連線ID，token只在加密store | `tests/integration/test_site_features.py`、`tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
-| 倉庫物品估值／勾選／快照 | `monitor/stash/pricer.py`、`monitor/stash/store.py` | 公開行情JSON＋加密私有倉庫；不從遊戲記憶體讀取 | `tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
+| 倉庫帳號連線與API | `web/app.py` 的 OAuth／session／stash API、`monitor/stash/client.py` | `templates/stash.html`；瀏覽器 cookie 為私有連線ID；OAuth token／opt-in POESESSID 只存加密store | `tests/integration/test_site_features.py`、`tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
+| 倉庫物品估值／勾選／快照 | `monitor/stash/pricer.py`、`monitor/stash/store.py` | 公開行情JSON＋按連線隔離加密的 OAuth/session 私有資料 | `tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
 | 舊通貨查價 | `monitor/economy/ninja_client.py`、pricer API | `templates/pricer.html`、`cache/economy_*.json` | `tests/integration/test_site_features.py`／`scripts/validate_site.py`；外部來源另驗 |
 | 裝備／拓荒篩選工具 | `templates/index.html` 的filter工具、`load_shop_filters` | `content/shop_filters.json` | `scripts/validate_site.py`／`docs/VALIDATION.md` |
 | 部署與全功能驗收 | `scripts/deploy.ps1`／GitHub workflow、`scripts/validate_site.py` | `requirements-validation.txt`；報告與截圖放TEMP | `docs/VALIDATION.md`；只測HTTP200不算通過 |
@@ -76,7 +76,7 @@ poe_web/
 
 ## 相容期與範圍
 
-功能套件依責任分為 `monitor/economy/`、`monitor/stash/`、`monitor/tw_pricer/`；操作CLI集中於 `scripts/`，專用手冊集中於 `docs/`，README、Flask入口、Dockerfile與依賴檔保留根目錄。行情快取、遊戲文章、模板與圖片保持既有資料契約路徑。測試分為 `tests/unit/` 與 `tests/integration/`。倉庫OAuth／路由協調仍在 `app.py`，不宣稱所有既有程式已重構。
+功能套件依責任分為 `monitor/economy/`、`monitor/stash/`、`monitor/tw_pricer/`；操作CLI集中於 `scripts/`，專用手冊集中於 `docs/`，README、Flask入口、Dockerfile與依賴檔保留根目錄。行情快取、遊戲文章、模板與圖片保持既有資料契約路徑。測試分為 `tests/unit/` 與 `tests/integration/`。倉庫 OAuth／session-cookie／路由協調仍在 `app.py`，不宣稱所有既有程式已重構。
 
 舊 `content/poe2/fliter/` 文件不在網站分類中載入，保留原檔。POE1 `beetle/` 文章在UI屬策略子項，讀取端已整合，不能因搬目錄破壞密碼保護與舊doc ID。這些legacy位置只為相容，新增內容不得使用錯字／混亂分類。
 
@@ -88,3 +88,4 @@ poe_web/
 | 1.0.1 | 2026-10-06 | 將 economy／台服行情分入各自套件，測試分 unit／integration，更新功能查找路徑。 |
 | 1.1.0 | 2026-10-06 | Web操作腳本歸入scripts/、專用文件歸入docs/，保留Flask／Docker必要根入口並更新所有引用。 |
 | 1.2.0 | 2026-10-06 | 加入根目錄架構說明及 Mermaid 圖，連結專案層級文件並說明可供其他專案套用的目錄原則。 |
+| 1.2.1 | 2026-10-07 | 倉庫查找表同步列出 OAuth／POESESSID session-cookie 連線與加密儲存。 |
