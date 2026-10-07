@@ -105,6 +105,10 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 
 2026-10-06 架構文件與目錄整理 commit `d784208a853c392db5227e8163c746459a6c0e6c` 已部署至 `poe-python-web-00044-gd4`，Ready／100%流量；部署前48項 unittest PASS，正式站 20 項桌機／手機功能檢查 PASS，OAuth真實登入／倉庫同步各 1 項 BLOCKED。正式 `/health/ready` PASS；未建立或修改線上排程。報告位於 TEMP 的 `poe-web-predeploy-validation.json` 與 `poe-web-postdeploy-validation.json`。此部署使用本機 gcloud，不代表 GitHub OIDC 流程已驗證。
 
+## 最近部署紀錄
+
+2026-10-07 使用者明確要求部署 Cloud Run 後，commit `cf3f0f2a4ea8049ed34f36d8410a9629975bde75`（POE2 時空法圖騰文章與圖片）已部署至 `poe-python-web-00045-4sv`，Ready／100% 流量，服務 URL 為 `https://poe-python-web-446879032144.asia-east1.run.app`。部署前 59 項 unittest PASS、桌機／手機核心檢查 20 PASS；正式 `/health/ready` PASS；部署後正式站桌機／手機 20 項 PASS，新流派文章兩張圖片成功載入／解碼。真實 OAuth 與 POESESSID 倉庫同步在桌機／手機各 2 項 BLOCKED（缺正式 client／使用者互動授權，未用 fixture 冒充）。使用本機 gcloud 部署，未修改排程；GitHub OIDC 部署流程未驗證。線上驗收報告為系統 TEMP 的 `poe2-time-space-totem-production.json`，正式截圖在該次 `validate_site.py` 產生的 TEMP 資料夾。
+
 ## 共用報告範本
 
 本次價格／查價修正的本機與部署映像驗證：26 項離線測試；18 項桌機／手機核心檢查 PASS，OAuth／倉庫各 1 項 BLOCKED。`--verify-official-trade` 實際 API 搜尋寒風／光譜分別查到 5／7 筆，各前三筆的全名、Lv21、品質20% 與腐化皆符合。當時公開開價為寒風 10／12／15 神聖石、光譜 7／8／10 神聖石，**不是成交價或本站的新估價**；結果可能隨市場改變。JSON／截圖在 TEMP 的 `poe-site-validation-official-trade.json`／同名目錄。
@@ -150,3 +154,4 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.1.7 | 2026-10-07 | 加入試算表正則單顆複製、參考文章載入與查價連結格式驗收；保留舊匯率／聯盟／版本快照限制。 |
 | 1.1.8 | 2026-10-07 | 新增 23 條 POE2 查價 `q` payload／聯盟回歸；23 個官方 search 有結果、妄想症 fetch PASS；說明官方回傳筆數限制。 |
 | 1.1.9 | 2026-10-07 | 新增 POE2 時空法圖騰流派文章與兩張原表圖片，加入公開分類、靜態圖片回應及瀏覽器解碼驗收。 |
+| 1.2.0 | 2026-10-07 | 記錄時空法圖騰文章部署至 `00045-4sv`；正式 readiness 與桌機／手機驗收 PASS，OAuth／session 外部授權維持 BLOCKED。 |
