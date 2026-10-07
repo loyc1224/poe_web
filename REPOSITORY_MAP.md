@@ -31,7 +31,7 @@ poe_web/
         tw_pricer_source.py 上游更新與驗證發布
     templates/             index／pricer／stash頁面
     static/                公開圖片／前端資產，新功能按領域分類
-    content/<game>/        人工遊戲文章，不放程式／帳號資料
+    content/<game>/        人工遊戲文章，不放程式／帳號資料；POE2/reference/ 收錄查價與版本筆記
     cache/                 產生的公共資料集；私有DB不追蹤
     tests/
       unit/                領域邏輯、資料契約與隔離儲存測試
@@ -62,6 +62,7 @@ poe_web/
 | 倉庫物品估值／勾選／快照 | `monitor/stash/pricer.py`、`monitor/stash/store.py` | 公開行情JSON＋按連線隔離加密的 OAuth/session 私有資料 | `tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
 | 舊通貨查價 | `monitor/economy/ninja_client.py`、pricer API | `templates/pricer.html`、`cache/economy_*.json` | `tests/integration/test_site_features.py`／`scripts/validate_site.py`；外部來源另驗 |
 | 裝備／拓荒篩選工具 | `templates/index.html` 的filter工具、`load_shop_filters` | `content/shop_filters.json` | `scripts/validate_site.py`／`docs/VALIDATION.md` |
+| POE2 試算表參考資料 | `app.py` 的 `load_games` | `content/poe2/reference/`；正則在 `content/shop_filters.json` | `tests/integration/test_site_features.py`、`scripts/validate_site.py` |
 | 部署與全功能驗收 | `scripts/deploy.ps1`／GitHub workflow、`scripts/validate_site.py` | `requirements-validation.txt`；報告與截圖放TEMP | `docs/VALIDATION.md`；只測HTTP200不算通過 |
 
 表內省略 `web/` 前綴的路徑均相對於 `web/`。
@@ -89,3 +90,4 @@ poe_web/
 | 1.1.0 | 2026-10-06 | Web操作腳本歸入scripts/、專用文件歸入docs/，保留Flask／Docker必要根入口並更新所有引用。 |
 | 1.2.0 | 2026-10-06 | 加入根目錄架構說明及 Mermaid 圖，連結專案層級文件並說明可供其他專案套用的目錄原則。 |
 | 1.2.1 | 2026-10-07 | 倉庫查找表同步列出 OAuth／POESESSID session-cookie 連線與加密儲存。 |
+| 1.3.0 | 2026-10-07 | 新增 POE2 參考資料分類及試算表查找列，標明正則設定與驗證位置。 |

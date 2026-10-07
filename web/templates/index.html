@@ -238,6 +238,13 @@
     .price-category-icon { width: 28px; height: 28px; flex: 0 0 28px; object-fit: contain; }
     .price-category-icon-blank { width: 28px; height: 28px; flex: 0 0 28px; }
     .price-kind-source-icon { width: 30px; height: 30px; flex: 0 0 30px; object-fit: contain; }
+    .sidebar-support { display: grid; gap: 4px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .sidebar-support-link { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px 10px; border: 1px solid transparent; border-radius: 8px; color: var(--text); text-decoration: none; }
+    .sidebar-support-link:hover { background: rgba(255,255,255,.04); border-color: var(--line); }
+    .sidebar-support-icon { width: 20px; flex: 0 0 20px; color: #fcd34d; font-size: 16px; font-weight: 700; text-align: center; }
+    .sidebar-support-copy { display: grid; gap: 2px; min-width: 0; }
+    .sidebar-support-title { font-size: 13px; font-weight: 600; }
+    .sidebar-support-detail { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
     .price-kind-source-icon[hidden] { display: none; }
     .strategy-subcategories { margin-left: 20px; padding-left: 8px; border-left: 1px solid var(--line); }
     /* ── LIST PANEL ─────────────────────────── */
@@ -730,6 +737,16 @@
         {% else %}
           <div class="empty">目前還沒有任何分類內容。</div>
         {% endif %}
+        <div class="sidebar-support" aria-label="聯絡與贊助">
+          <a class="sidebar-support-link" id="siteContactLink" href="mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Contact">
+            <span class="sidebar-support-icon" aria-hidden="true">@</span>
+            <span class="sidebar-support-copy"><span class="sidebar-support-title">聯絡作者</span><span class="sidebar-support-detail">emo1224@gmail.com</span></span>
+          </a>
+          <a class="sidebar-support-link" id="siteSponsorLink" href="mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Sponsorship">
+            <span class="sidebar-support-icon" aria-hidden="true">+</span>
+            <span class="sidebar-support-copy"><span class="sidebar-support-title">贊助本站</span><span class="sidebar-support-detail">來信洽詢贊助方式</span></span>
+          </a>
+        </div>
       </aside>
 
       <section class="list-panel">
@@ -978,7 +995,7 @@
           <article class="doc-panel" data-doc-panel="tool-shop-filter">
             <div class="meta poe2-meta">❄️ Path of Exile 2 / 拓荒篩選</div>
             <h1>商店篩選工具</h1>
-            <p class="sf-desc">點擊關鍵字標籤將其加入篩選字串（可多選），完成後按「複製」貼入遊戲商店搜尋框；也可點右側 ⧉ 單獨複製單一關鍵字。<br>多個關鍵字以 <code>|</code> 分隔，可同時比對多條詞綴。</p>
+            <p class="sf-desc">點擊關鍵字標籤將其加入篩選字串（可多選），完成後按「複製」貼入遊戲商店搜尋框；也可點右側 ⧉ 單獨複製單一關鍵字。<br>多選會以 <code>|</code>（OR）組合；若要同時符合多個條件，請單獨複製後以空格連接（AND）。</p>
 
             <div class="filter-builder">
               <div class="filter-builder-label">篩選字串</div>

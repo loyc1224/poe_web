@@ -69,6 +69,7 @@ CATEGORY_LABELS = {
     "crafting": "做裝",
     "beetle": "甲蟲",
     "builds": "流派",
+    "reference": "參考資料",
     "storyline": "主線劇情",
 }
 

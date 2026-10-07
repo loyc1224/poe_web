@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import tempfile
 import unittest
 from contextlib import ExitStack
@@ -33,6 +35,12 @@ class SiteFeatureTests(unittest.TestCase):
             self.assertEqual(self.client.post("/api/strategy/unlock", json={"password": "anything"}).status_code, 503)
         with patch.dict(os.environ, {"FLASK_SECRET_KEY": "", "SECRET_KEY": ""}):
             self.assertEqual(self.client.get("/health/ready").status_code, 503)
+
+    def test_homepage_contact_and_sponsorship_links_use_the_provided_email(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('id="siteContactLink" href="mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Contact"', page)
+        self.assertIn('id="siteSponsorLink" href="mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Sponsorship"', page)
+        self.assertIn("來信洽詢贊助方式", page)
 
     def test_unused_filter_is_removed_and_beetle_is_a_protected_strategy_subcategory(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -92,6 +100,81 @@ class SiteFeatureTests(unittest.TestCase):
         password = "\u7b56\u7565\u6e2c\u8a66"
         with patch.object(web_app, "STRATEGY_PASSWORD", password):
             self.assertEqual(self.client.post("/api/strategy/unlock", json={"password": password}).status_code, 200)
+
+    def test_spreadsheet_regexes_are_available_as_individual_copy_controls(self):
+        filters = web_app.load_shop_filters()["poe2"]
+        shop_keywords = [keyword for group in filters["shop_groups"] for keyword in group["keywords"]]
+        self.assertIn(
+            {"label": "珠寶泛用初篩", "kw": "(元|冰|電|火|植|物).*傷|法術|暴|詛|召|攻|近|施|變|大能量|弓|矛|細|投射"},
+            shop_keywords,
+        )
+        self.assertIn(
+            {"label": "怪物效能 >=26%", "kw": "效能.*(2[6-9]|[3-9][0-9])"},
+            filters["waystone_keywords"],
+        )
+        self.assertIn({"label": "冰緩或時空", "kw": "冰緩|時空"}, filters["waystone_keywords"])
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('data-kw="效能.*(2[6-9]|[3-9][0-9])"', page)
+        self.assertIn('title="複製此詞"', page)
+        self.assertIn("空格連接（AND）", page)
+
+    def test_spreadsheet_reference_articles_load_in_public_category(self):
+        games = web_app.load_games(include_strategies=False)
+        poe2 = next(game for game in games if game["id"] == "poe2")
+        reference = next(category for category in poe2["categories"] if category["name"] == "reference")
+        self.assertEqual(reference["label"], "參考資料")
+        self.assertEqual(
+            {document["title"] for document in reference["documents"]},
+            {"POE2 台服查價捷徑", "POE2 通貨匯率試算表快照", "POE2 探險島嶼速查"},
+        )
+        trade_doc = next(document for document in reference["documents"] if document["title"] == "POE2 台服查價捷徑")
+        self.assertIn("pathofexile.tw/trade2/search/poe2/", trade_doc["html"])
+        self.assertEqual(trade_doc["html"].count("pathofexile.tw/trade2/search/poe2/"), 23)
+        from urllib.parse import parse_qs, unquote, urlsplit
+
+        markdown_path = web_app.CONTENT_DIR / "poe2" / "reference" / "poe2-trade-search-shortcuts.md"
+        urls = re.findall(r"\[台服搜尋\]\((https://[^)]+)\)", markdown_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(urls), 23)
+        named_items = set()
+        queries = []
+        for url in urls:
+            parsed = urlsplit(url)
+            self.assertEqual(unquote(parsed.path).split("/")[-1], "禁忌儀式")
+            payload = json.loads(parse_qs(parsed.query)["q"][0])
+            query = payload["query"]
+            queries.append(query)
+            self.assertEqual(query["status"], {"option": "available"})
+            self.assertEqual(payload["sort"], {"price": "asc"})
+            filters = query.get("filters", {}).get("type_filters", {}).get("filters", {})
+            category = filters.get("category", {}).get("option")
+            self.assertTrue(query.get("name") or query.get("type") or category)
+            if query.get("name"):
+                named_items.add(query["name"])
+        self.assertEqual(
+            named_items,
+            {"妄想症", "水井之心", "力抗黑暗", "不敗亡者", "阿茲里的威權", "骷髏馬克的掌握"},
+        )
+        category_options = {
+            query.get("filters", {}).get("type_filters", {}).get("filters", {}).get("category", {}).get("option")
+            for query in queries
+            if query.get("filters", {}).get("type_filters", {}).get("filters", {}).get("category")
+        }
+        self.assertLessEqual(
+            category_options,
+            {
+                "jewel", "accessory.ring", "accessory.amulet", "armour.helmet", "weapon.talisman",
+                "armour.boots", "weapon.spear", "weapon.sceptre", "weapon.warstaff", "weapon.wand",
+                "armour.quiver", "armour.focus", "map.tablet", "armour.chest", "armour.gloves",
+            },
+        )
+        socket_query = next(query for query in queries if query.get("type") == "聖賢魔符")
+        self.assertEqual(
+            socket_query["filters"]["equipment_filters"]["filters"]["rune_sockets"],
+            {"min": 3, "max": 3},
+        )
+        self.assertNotIn("阿德爾的符文", trade_doc["html"])
+        self.assertNotIn("瓦爾命途", trade_doc["html"])
+        self.assertIn("POE2DB 台灣站", next(document for document in reference["documents"] if document["title"] == "POE2 探險島嶼速查")["html"])
 
     def test_published_datasets_for_every_supported_game_and_kind(self):
         for game in ("poe1", "poe2"):

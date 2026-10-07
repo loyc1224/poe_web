@@ -20,7 +20,9 @@
 ## 功能
 
 - 首頁三欄知識庫，支援 POE1／POE2 分類、文章與策略密碼保護。
+- 側欄提供作者聯絡與贊助詢問入口，寄至 `emo1224@gmail.com`；贊助方式以 email 洽詢。
 - POE1 甲蟲列為策略子項，與其他策略一起受密碼保護；舊 Filter 文章分類不再顯示，裝備／拓荒篩選工具維持可用。策略密碼來自 `STRATEGY_PASSWORD` 環境設定，不存 SQLite。
+- POE2 篩選工具提供試算表匯入的珠寶／拓荒／地圖正則，可逐條複製；查價捷徑、歷史通貨快照與探險島嶼筆記收錄在「參考資料」。
 - 左側 POE1／POE2「物價」可折疊，分類有通貨、傳奇、寶石；POE1 另有野獸。各類依來源分類顯示圖示、中文名稱與筆數，選取後右側原地篩選。
 - 價格以基準通貨圖示 → 物品圖示表示，另顯示趨勢、掛單數或信心資訊。
 - 每筆價格旁提供另開的台服官方交易搜尋連結。
@@ -108,7 +110,7 @@ web/
   scripts/                deploy, refresh, local startup and browser validation CLI
   docs/                   stash API, validation process and session handoff
   cache/                  generated JSON / local database cache
-  content/<game>/<type>/  structured Markdown knowledge
+	content/<game>/<type>/  structured Markdown knowledge; POE2/reference/ stores curated lookups
   templates/              Jinja pages and panels
   static/                 images and static assets
   tests/
@@ -200,6 +202,7 @@ python scripts/refresh_tw_currency.py --trade-metadata-only
 - 個人倉庫統計、官方API限制與安全接入：[`docs/STASH.md`](docs/STASH.md)
 - 延續作業摘要：[`docs/SESSION_HANDOFF.md`](docs/SESSION_HANDOFF.md)
 - PoE2 篩選規格：`content/poe2/strategy/poe2-regex-filter-spec.md`
+- POE2 試算表整理：`content/poe2/reference/`（查價捷徑、歷史通貨快照、探險島嶼速查）
 - POE1／POE2 物價資料 API：`/api/tw-pricer/<kind>?game=poe1|poe2`，kind 為 `currency`、`unique`、`gem`；`beast` 僅限 POE1
 
 ## Change Log
@@ -219,3 +222,6 @@ python scripts/refresh_tw_currency.py --trade-metadata-only
 | 1.7.0 | 2026-10-06 | 新增根目錄架構圖與可重用專案骨架，從 README 提供架構入口。 |
 | 1.7.1 | 2026-10-07 | 新增 OAuth／私人帳號資料接入規範，補齊授權碼 scope 與官方 User-Agent，加入成功 callback 測試。 |
 | 1.7.2 | 2026-10-07 | 新增明確 opt-in POESESSID session-cookie 倉庫連線與風險揭露，保留官方 OAuth 模式。 |
+| 1.8.0 | 2026-10-07 | 匯入 POE2 試算表內容，新增參考資料分類、可單顆複製的篩選正則與舊行情時效說明。 |
+| 1.8.1 | 2026-10-07 | 修正 23 條 POE2 查價捷徑：改用有物品條件的官方 `?q=` 搜尋及目前聯盟；23/23 官方搜尋有結果，新增全量 payload 回歸。 |
+| 1.8.2 | 2026-10-07 | 首頁側欄新增作者聯絡與贊助詢問 email 入口，補桌機／手機連結驗收。 |

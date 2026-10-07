@@ -78,6 +78,12 @@ def check_documents(page):
 def check_navigation(page):
     require(page.locator('[data-category-target$="-filter"], [data-category-target$="-fliter"], [data-category-target$="-beetle"]').count() == 0, "Unused filter or top-level beetle category remains")
     require(page.locator('.strategy-subcategories [data-strategy-parent="poe1-strategy"][data-strategy-subcategory="beetle"]').count() == 1, "Beetle must be a strategy submenu")
+    contact = page.locator('#siteContactLink')
+    sponsor = page.locator('#siteSponsorLink')
+    expect(contact).to_be_visible()
+    expect(sponsor).to_be_visible()
+    require(contact.get_attribute('href') == 'mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Contact', 'Contact link does not use the provided email')
+    require(sponsor.get_attribute('href') == 'mailto:emo1224@gmail.com?subject=POE%20Knowledge%20Base%20Sponsorship', 'Sponsorship link does not use the provided email')
 
 
 def check_prices(page, verify_official=False, official_results=None):
@@ -270,6 +276,16 @@ def check_filters(page, context):
     for tab in page.locator('.p1-tab').all():
         tab.click()
         expect(tab).to_have_class('p1-tab active')
+    page.locator('[data-category-target="poe2-tools"]').click()
+    if not page.locator('#wsFilterDisplay').is_visible():
+        page.locator('details:has(#wsFilterDisplay) > summary').click()
+    imported_regex = '效能.*(2[6-9]|[3-9][0-9])'
+    imported_chip = page.locator('.kw-chip-ws').filter(has=page.get_by_text('怪物效能 >=26%', exact=True))
+    require(imported_chip.count() == 1, 'Spreadsheet regex is missing from the waystone filters')
+    context.grant_permissions(['clipboard-read', 'clipboard-write'])
+    imported_chip.locator('.chip-copy-btn').click()
+    expect(page.locator('#copyToast')).to_have_text('已複製：' + imported_regex)
+    require(page.evaluate('navigator.clipboard.readText()') == imported_regex, 'Individual spreadsheet regex copy changed the source expression')
 
 
 def check_legacy_pricer(page):

@@ -41,13 +41,15 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 健康／設定 | `/health` 存活；`/health/ready` 檢查策略密碼與固定 session key | readiness 只回傳布林，不回傳密碼 |
 | 首次導覽 icon | 全新瀏覽器狀態、有效 src、可見圖逐一 decode、naturalWidth／Height | 沒有來源圖片的類別應隱藏空圖，不假造來源圖片 |
 | 導覽分類 | 舊 Filter 入口不存在；甲蟲位於策略子項，未解鎖不傳送文章，子項解鎖後開啟甲蟲文章 | 保留裝備／拓荒篩選工具；原始 Filter 文件保留但不載入網站分類 |
+| 聯絡／贊助 | 桌機／手機側欄均顯示聯絡及贊助 mailto，收件地址與主旨分別正確 | 贊助方式尚未提供，因此使用 email 詢問，不顯示未核實的付款連結 |
 | 文章 | 公開與解鎖後策略文章逐一開啟、內容非空、圖片解碼 | 不把文章內容或密碼寫入測試報告 |
 | 策略 | 錯誤密碼、成功解鎖、重新整理後仍解鎖、兩版策略文章、鎖回 | 離線另測設定缺漏、錯誤 JSON、Unicode 密碼、限流與 session key 變更 |
 | 台服物價 | POE1 四類／POE2 三類、game／kind／status、搜尋、排序、分類、重新讀取、現價／歷史價區隔、文字單位與代表物品圖 | unavailable 不可回退到 medianChaos／lastPrice；UI 刷新只重讀 JSON |
 | 台服查價 | 逐一解碼 DOM query，核對已發布官方 type/name/discriminator、遊戲專屬路径、gem_level／quality／corrupted；零品質與 false 不丟失 | canonical 名稱表需精確 match；未知／歧義名稱停用，不能把全名直接塞 type |
 | 傳奇裝備查价 | unique 完整名稱＋基底、rarity=unique、identified=true；官方掛單抽查魔血／重革腰帶、獵首／皮革腰帶、漢恩的蔑視／領主戰冠 | 不驗稀有詞綴或特定 unique rolls；貼膜仍是 Unique，不能只看 frameType=3 |
-| 篩選 | POE1 裝備、POE2 商店／換界石，選取、清除、換界石重置、POE1 tabs | 每組工具有獨立 selector，空選取與剪貼簿權限分開測試 |
-| 複製 | 剪貼簿拒絕有錯誤狀態；允許時逐字比對已複製字串 | 無未處理 Promise／pageerror |
+| 篩選 | POE1 裝備、POE2 商店／換界石與匯入的珠寶／拓荒／地圖正則；選取、清除、換界石重置、POE1 tabs | 每組工具有獨立 selector；逐字驗證單顆匯入正則可複製 |
+| 複製 | 剪貼簿拒絕有錯誤狀態；允許時逐字比對組合字串及匯入的單顆正則 | 無未處理 Promise／pageerror |
+| POE2 參考資料 | 23 條查價連結逐一解析 `?q=` JSON，檢查指定物品 name/type、官方分類、聯盟、排序與 3 插槽條件；23/23 個官方 API search 實際回 200 且有結果，妄想症另 fetch 核對物品身分 | 聯盟於 2026-10-07 驗為「禁忌儀式」；官方 API 回傳最多 100 筆，不代表掛單總數。匯率和 0.5.4 攻略只作快照 |
 | 舊查價頁 | 兩版切換、搜尋、排序、強制刷新參數，以 deterministic fixture 驗 UI | **不代表外部 poe.ninja 真實刷新或價格正確性已驗證** |
 | OAuth／倉庫 | OAuth fixture 驗 PKCE／scope／token 隔離；session fixture 驗 cookie 格式、台服 endpoint、頁籤、401／403／429、session 不外洩、加密保存與斷開清除 | Fixture 不是真實帳號；OAuth 需本站 client；session roundtrip 需玩家自行輸入後才可列真實 PASS |
 | 新倉庫統計 | OAuth／session-connected 與未登入狀態、分頁／物品選取、搜尋排序、分類占比、歷史圖、空分頁、圖片解碼與 JS 錯誤 | Fixture 不是真實帳號資產；session endpoint 非官方文件 API，尚無真實 session roundtrip 證據時標 BLOCKED |
@@ -88,6 +90,8 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 2026-10-06 | 未先確認官方受理狀態就把註冊client當成可立即完成，後又把國際服公告直接套用台服 | 國際服Getting Started暫停新申請，但台服政策尚未確認；使用者授權紀錄證明既有台服應用存在。需台服官方確認本站核發途徑／回呼／API，不能推論既有應用是最近核發或借用其client |
 | 2026-10-07 | OAuth code exchange 未送出授權 scope，官方 API User-Agent 未識別 registered client/contact | token exchange 加回 scope；refresh/token/stash requests 統一使用官方 OAuth User-Agent，fixture 驗 PKCE／callback／scope／header／token 不外洩 |
 | 2026-10-07 | OAuth client 未設定時玩家無法連線；使用者指定增加 POESESSID session 模式 | 新增明確風險勾選、32 位格式檢查、固定 endpoint、250ms 最小請求間隔、加密 per-connection 儲存、同步與斷開清除；尚未使用真實 POESESSID roundtrip |
+| 2026-10-07 | 試算表混合正則、聯盟查價連結、舊匯率與探險筆記 | 正則按用途加入可單顆複製工具；其餘分類成參考文章並揭露時效／錯誤限制；單顆剪貼簿逐字比對納入桌機／手機閘門 |
+| 2026-10-07 | 試算表的 23 個保存搜尋 ID 不含可檢查的 q JSON，且使用已退役聯盟；只比對 ID／HTTP 200 會誤判有效 | 全部重建為目前聯盟 `?q=` 查詢：指定物品帶官方 name/type、裝備類別帶官方 category；整合測試逐條解析 23 個 payload。官方 API 23/23 searches 有結果，妄想症 fetch 身分 PASS；分批測試避免持續觸發限流 |
 | 2026-10-06 | economy／台服行情模組與測試平鋪，新增功能難依責任定位 | 模組歸類至 `monitor/economy/`、`monitor/tw_pricer/`；測試分 `tests/unit/`、`tests/integration/`；全量 unittest discovery 48 PASS、舊路徑搜尋無殘留，桌機／手機各 10 項 PASS |
 | 2026-10-06 | Web根目錄散落部署／更新／驗證腳本與多份操作Markdown | 腳本移至 `scripts/`、專用手冊移至 `docs/`；修正 CI／命令／匯入根路徑；CLI `--help`、PowerShell parser、完整測試與瀏覽器矩陣做提交前驗證 |
 | 2026-10-06 | 架構文件與目錄整理提交後依使用者要求部署 | commit `d784208` 部署至 `poe-python-web-00044-gd4`，Ready／100%流量；48 tests PASS，正式站桌機／手機20 checks PASS，真實 OAuth 各 1 BLOCKED；readiness PASS，未修改排程 |
@@ -142,3 +146,5 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.1.4 | 2026-10-07 | 51 項離線測試 PASS；驗證 PKCE callback／refresh grant 的 scope、User-Agent、伺服器端 token 隔離。瀏覽器 20 PASS，真實 OAuth 桌機／手機 2 BLOCKED。 |
 | 1.1.5 | 2026-10-07 | 新增桌機／手機「點擊但缺 client」明確錯誤提示驗收，避免回同頁看似無反應。 |
 | 1.1.6 | 2026-10-07 | 新增 POESESSID session 連線 consent／加密／清除與 OAuth 並存驗收；55 項測試、瀏覽器 20 PASS；真實 OAuth 2 與 session-cookie roundtrip 2 BLOCKED。 |
+| 1.1.7 | 2026-10-07 | 加入試算表正則單顆複製、參考文章載入與查價連結格式驗收；保留舊匯率／聯盟／版本快照限制。 |
+| 1.1.8 | 2026-10-07 | 新增 23 條 POE2 查價 `q` payload／聯盟回歸；23 個官方 search 有結果、妄想症 fetch PASS；說明官方回傳筆數限制。 |
