@@ -64,6 +64,8 @@ poe_web/
 | 裝備／拓荒篩選工具 | `templates/index.html` 的filter工具、`load_shop_filters` | `content/shop_filters.json` | `scripts/validate_site.py`／`docs/VALIDATION.md` |
 | POE2 試算表參考資料 | `app.py` 的 `load_games` | `content/poe2/reference/`；正則在 `content/shop_filters.json` | `tests/integration/test_site_features.py`、`scripts/validate_site.py` |
 | POE2 時空法圖騰 v2.0 流派 | `app.py` 的 `load_games` | `content/poe2/builds/poe2-time-space-totem.md`、`static/poe2/images/poe2-time-space-totem-*` | `tests/integration/test_site_features.py`、`scripts/validate_site.py` |
+| POE1 Sunder 拓荒轉 Earthshatter 流派 | `app.py` 的 `load_games` | `content/poe1/builds/poe1-sunder-to-earthshatter.md` | `tests/integration/test_site_features.py`；Woolie 3.29 Mobalytics 指南 |
+| POE1 閃現打擊暴徒流派 | `app.py` 的 `load_games` | `content/poe1/builds/poe1-flicker-strike-berserker.md` | `tests/integration/test_site_features.py`；KingPinUwU 3.29 Mobalytics 指南／PoB |
 | 部署與全功能驗收 | `scripts/deploy.ps1`／GitHub workflow、`scripts/validate_site.py` | `requirements-validation.txt`；報告與截圖放TEMP | `docs/VALIDATION.md`；只測HTTP200不算通過 |
 
 表內省略 `web/` 前綴的路徑均相對於 `web/`。
@@ -93,3 +95,4 @@ poe_web/
 | 1.2.1 | 2026-10-07 | 倉庫查找表同步列出 OAuth／POESESSID session-cookie 連線與加密儲存。 |
 | 1.3.0 | 2026-10-07 | 新增 POE2 參考資料分類及試算表查找列，標明正則設定與驗證位置。 |
 | 1.4.0 | 2026-10-07 | 功能查找表加入 POE2 時空法圖騰流派文章與專屬圖片路徑。 |
+| 1.6.0 | 2026-10-19 | POE1 流派索引補入技能連線與裝備能力表，連結共用文章驗收規格。 |

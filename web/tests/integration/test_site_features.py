@@ -57,6 +57,45 @@ class SiteFeatureTests(unittest.TestCase):
             self.assertTrue(response.mimetype.startswith("image/"))
             response.close()
 
+    def test_poe1_sunder_to_earthshatter_build_loads_with_tables_and_sources(self):
+        games = web_app.load_games(include_strategies=False)
+        poe1 = next(game for game in games if game["id"] == "poe1")
+        builds = next(category for category in poe1["categories"] if category["name"] == "builds")
+        article = next(document for document in builds["documents"] if document["id"] == "poe1-builds-poe1-sunder-to-earthshatter")
+
+        self.assertEqual(article["title"], "POE1 3.29 裂地之擊拓荒轉大地震擊")
+        self.assertIn("Sunder（裂地之擊）", article["summary"])
+        self.assertIn("<table>", article["html"])
+        self.assertIn("技能連線表", article["html"])
+        self.assertIn("裝備要拿的能力", article["html"])
+        self.assertIn("近戰物理傷害輔助", article["html"])
+        self.assertIn("Rustic Sash", article["html"])
+        self.assertIn("Earthshatter", article["html"])
+        self.assertIn("Autoexertion", article["html"])
+        self.assertIn("mobalytics.gg/poe/profile/woolie/builds/woolie-s-sunder-leveling-all-ascendancies", article["html"])
+        self.assertIn("mobalytics.gg/poe/builds/woolie-earthshatter-juggernaut", article["html"])
+
+    def test_poe1_flicker_strike_build_loads_with_caveats_and_path_of_building(self):
+        games = web_app.load_games(include_strategies=False)
+        poe1 = next(game for game in games if game["id"] == "poe1")
+        builds = next(category for category in poe1["categories"] if category["name"] == "builds")
+        article = next(document for document in builds["documents"] if document["id"] == "poe1-builds-poe1-flicker-strike-berserker")
+
+        self.assertEqual(article["title"], "POE1 3.29 閃現打擊暴徒拓荒與終盤整理")
+        self.assertIn("閃現打擊", article["summary"])
+        self.assertIn("<table>", article["html"])
+        self.assertIn("技能連線表", article["html"])
+        self.assertIn("裝備要拿的能力", article["html"])
+        self.assertIn("1～12 級", article["html"])
+        self.assertIn("13～37 級", article["html"])
+        self.assertIn("38 級轉型", article["html"])
+        self.assertIn("抗性、最大生命、缺少的力量／敏捷／智慧", article["html"])
+        self.assertIn("Flicker Strike", article["html"])
+        self.assertIn("Iron Reflexes", article["html"])
+        self.assertIn("僅為示例，暫勿照抄", article["html"])
+        self.assertIn("pobb.in/ZxjwWsxwPq4F", article["html"])
+        self.assertIn("mobalytics.gg/poe/profile/kingpinuwu/builds/3-29-flicker-strike-league-starter-early-late-endgame", article["html"])
+
     def test_unused_filter_is_removed_and_beetle_is_a_protected_strategy_subcategory(self):
         with tempfile.TemporaryDirectory() as directory:
             content = Path(directory)
