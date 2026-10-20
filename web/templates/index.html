@@ -941,6 +941,7 @@
               <button class="p1-tab" data-p1-tab="fire">火焰</button>
               <button class="p1-tab" data-p1-tab="level">等級+1</button>
               <button class="p1-tab" data-p1-tab="move">移動</button>
+              <button class="p1-tab" data-p1-tab="community">拓荒 Regex</button>
             </div>
 
             <div class="kw-section">
@@ -988,6 +989,36 @@
                   <div class="kw-chip-p1" data-kw="弓箭技能寶石" data-tags="level"><span class="chip-label">弓箭技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                   <div class="kw-chip-p1" data-kw="近戰技能寶石" data-tags="level"><span class="chip-label">近戰技能寶石</span><button class="chip-copy-btn" title="複製此詞">⧉</button></div>
                 </div>
+              </div>
+
+              <div class="kw-group" data-p1-group="community">
+                <div class="kw-group-title-p1">🧰 拓荒正則</div>
+                <p class="sf-desc">按客戶端語言選用，每條都是獨立搜尋式，點 ⧉ 單獨複製；不會加入上方中文詞綴組合。生命／抗性初篩較寬鬆，結果會較多。</p>
+                {% for group in shop_filters.poe1.starter_groups %}
+                <div class="kw-group">
+                  <div class="kw-group-title-p1">{{ group.title }}</div>
+                  <div class="kw-chips">
+                    {% for kw in group.keywords %}
+                    <div class="kw-chip-p1 p1-regex-copy" data-kw="{{ kw.kw }}" data-tags="community"><span class="chip-label">{{ kw.label }}</span><button class="chip-copy-btn" title="單獨複製此正則">⧉</button></div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endfor %}
+                {% for group in shop_filters.poe1.localized_groups %}
+                <div class="kw-group">
+                  <div class="kw-group-title-p1">{{ group.title }}</div>
+                  <div class="kw-chips">
+                    {% for kw in group.keywords %}
+                    <div class="kw-chip-p1 p1-regex-copy" data-kw="{{ kw.kw }}" data-tags="community"><span class="chip-label">{{ kw.label }}</span><button class="chip-copy-btn" title="單獨複製此正則">⧉</button></div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endfor %}
+                <p class="sf-desc">來源：
+                  {% for source in shop_filters.poe1.sources %}
+                  <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>{% if not loop.last %}、{% endif %}
+                  {% endfor %}
+                </p>
               </div>
             </div>
           </article>
@@ -1768,7 +1799,7 @@
         }
       }
 
-      document.querySelectorAll('.kw-chip-p1').forEach(chip => {
+      document.querySelectorAll('.kw-chip-p1:not(.p1-regex-copy)').forEach(chip => {
         const kw = chip.dataset.kw;
         if (P1_DEFAULT.includes(kw)) chip.classList.add('active');
         chip.querySelector('.chip-label').addEventListener('click', () => {
@@ -1783,6 +1814,14 @@
         });
       });
 
+      document.querySelectorAll('.p1-regex-copy').forEach(chip => {
+        const kw = chip.dataset.kw;
+        chip.querySelector('.chip-copy-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyFilterText(kw, showToast, '已複製正則：' + kw);
+        });
+      });
+
       copyBtn.addEventListener('click', () => {
         if (activeKws.length === 0) { showToast('尚未選取任何關鍵字'); return; }
         copyFilterText(activeKws.join('|'), showToast, 'PoE1 篩選字串已複製！');
@@ -1790,7 +1829,7 @@
 
       clearBtn.addEventListener('click', () => {
         activeKws.length = 0;
-        document.querySelectorAll('.kw-chip-p1').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.kw-chip-p1:not(.p1-regex-copy)').forEach(c => c.classList.remove('active'));
         updateDisplay();
       });
 

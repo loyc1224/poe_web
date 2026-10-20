@@ -164,6 +164,11 @@ def load_shop_filters() -> dict:
     """載入商店/換界石篩選配置（由文件生成前端篩選按鈕）"""
     filters_file = CONTENT_DIR / "shop_filters.json"
     fallback = {
+        "poe1": {
+            "starter_groups": [],
+            "localized_groups": [],
+            "sources": [],
+        },
         "poe2": {
             "shop_defaults": [],
             "shop_groups": [],

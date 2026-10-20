@@ -61,11 +61,12 @@ poe_web/
 | 倉庫帳號連線與API | `web/app.py` 的 OAuth／session／stash API、`monitor/stash/client.py` | `templates/stash.html`；瀏覽器 cookie 為私有連線ID；OAuth token／opt-in POESESSID 只存加密store | `tests/integration/test_site_features.py`、`tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
 | 倉庫物品估值／勾選／快照 | `monitor/stash/pricer.py`、`monitor/stash/store.py` | 公開行情JSON＋按連線隔離加密的 OAuth/session 私有資料 | `tests/unit/test_stash_pricer.py`、`docs/STASH.md` |
 | 舊通貨查價 | `monitor/economy/ninja_client.py`、pricer API | `templates/pricer.html`、`cache/economy_*.json` | `tests/integration/test_site_features.py`／`scripts/validate_site.py`；外部來源另驗 |
-| 裝備／拓荒篩選工具 | `templates/index.html` 的filter工具、`load_shop_filters` | `content/shop_filters.json` | `scripts/validate_site.py`／`docs/VALIDATION.md` |
+| 裝備／拓荒篩選工具 | `templates/index.html` 的 POE1／POE2 filter 工具、`load_shop_filters` | `content/shop_filters.json`；POE1 regex 按繁中／英文客戶端分組並列來源 | `tests/integration/test_site_features.py`、`scripts/validate_site.py`／`docs/VALIDATION.md` |
 | POE2 試算表參考資料 | `app.py` 的 `load_games` | `content/poe2/reference/`；正則在 `content/shop_filters.json` | `tests/integration/test_site_features.py`、`scripts/validate_site.py` |
 | POE2 時空法圖騰 v2.0 流派 | `app.py` 的 `load_games` | `content/poe2/builds/poe2-time-space-totem.md`、`static/poe2/images/poe2-time-space-totem-*` | `tests/integration/test_site_features.py`、`scripts/validate_site.py` |
 | POE1 Sunder 拓荒轉 Earthshatter 流派 | `app.py` 的 `load_games` | `content/poe1/builds/poe1-sunder-to-earthshatter.md` | `tests/integration/test_site_features.py`；Woolie 3.29 Mobalytics 指南 |
 | POE1 閃現打擊暴徒流派 | `app.py` 的 `load_games` | `content/poe1/builds/poe1-flicker-strike-berserker.md` | `tests/integration/test_site_features.py`；KingPinUwU 3.29 Mobalytics 指南／PoB |
+| POE1 閃現打擊拓荒（使用者實跑） | `app.py` 的 `load_games` | `content/poe1/builds/poe1-flicker-strike-leveling-playtest.md`、`static/poe1/images/poe1-gem-*` | `tests/integration/test_site_features.py`；使用者實跑紀錄＋PoEDB 角色快照，資料來源分列 |
 | 部署與全功能驗收 | `scripts/deploy.ps1`／GitHub workflow、`scripts/validate_site.py` | `requirements-validation.txt`；報告與截圖放TEMP | `docs/VALIDATION.md`；只測HTTP200不算通過 |
 
 表內省略 `web/` 前綴的路徑均相對於 `web/`。

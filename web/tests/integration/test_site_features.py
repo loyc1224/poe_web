@@ -96,6 +96,41 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertIn("pobb.in/ZxjwWsxwPq4F", article["html"])
         self.assertIn("mobalytics.gg/poe/profile/kingpinuwu/builds/3-29-flicker-strike-league-starter-early-late-endgame", article["html"])
 
+    def test_poe1_flicker_strike_playtest_build_loads_as_a_separate_article(self):
+        games = web_app.load_games(include_strategies=False)
+        poe1 = next(game for game in games if game["id"] == "poe1")
+        builds = next(category for category in poe1["categories"] if category["name"] == "builds")
+        article = next(document for document in builds["documents"] if document["id"] == "poe1-builds-poe1-flicker-strike-leveling-playtest")
+
+        self.assertEqual(article["title"], "POE1 閃現打擊拓荒（實跑）")
+        self.assertIn("玩家實際拓荒紀錄", article["summary"])
+        self.assertIn("凡事相信", article["html"])
+        self.assertIn("咒海 v3.29／自力", article["html"])
+        self.assertIn("09:55:53", article["html"])
+        self.assertIn("poedb.tw/poe_build?name=", article["html"])
+        for expected in (
+            "鋼之裂化", "大地震擊", "38 級轉型", "多重打擊", "擊中時印記", "盜獵者印記",
+            "綠色插槽", "鮮血狂怒", "迅捷", "力量之井", "282／秒", "PoEDB 角色快照",
+            "凡事相信", "易變輔助", "機率流血輔助", "大地震擊（Shockwave Slam）", "力量爆破（Kinetic Blast）",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, article["html"])
+        for image in (
+            "poe1-gem-flicker-strike.png", "poe1-gem-multistrike.png", "poe1-gem-close-combat.png",
+            "poe1-gem-faster-attacks.png", "poe1-gem-melee-physical.png", "poe1-gem-mark-on-hit.png",
+            "poe1-gem-poachers-mark.png", "poe1-gem-blood-rage.png", "poe1-gem-frostblink.png",
+            "poe1-gem-haste.png", "poe1-gem-vitality.png", "poe1-gem-leap-slam.png",
+            "poe1-gem-volatility.png", "poe1-gem-chance-to-bleed.png", "poe1-gem-shockwave-slam.png",
+            "poe1-gem-steelskin.png", "poe1-gem-wand-wisp-support.png",
+        ):
+            with self.subTest(image=image):
+                self.assertIn(f"/static/poe1/images/{image}", article["html"])
+                response = self.client.get(f"/static/poe1/images/{image}")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.mimetype, "image/png")
+                response.close()
+        self.assertIn("不是外部攻略配置", article["html"])
+
     def test_unused_filter_is_removed_and_beetle_is_a_protected_strategy_subcategory(self):
         with tempfile.TemporaryDirectory() as directory:
             content = Path(directory)
@@ -171,6 +206,62 @@ class SiteFeatureTests(unittest.TestCase):
         self.assertIn('data-kw="效能.*(2[6-9]|[3-9][0-9])"', page)
         self.assertIn('title="複製此詞"', page)
         self.assertIn("空格連接（AND）", page)
+
+    def test_poe1_community_starter_regexes_render_as_individual_copy_controls(self):
+        filters = web_app.load_shop_filters()["poe1"]
+        keywords = [keyword for group in filters["starter_groups"] for keyword in group["keywords"]]
+        localized_keywords = [keyword for group in filters["localized_groups"] for keyword in group["keywords"]]
+        self.assertIn({"label": "10% 或 15% 移動速度", "kw": "Runn|rint"}, keywords)
+        self.assertIn({"label": "生命或抗性（寬鬆初篩）", "kw": "m life|res"}, keywords)
+        self.assertIn({"label": "任意 +1 權杖", "kw": "\"ll g\""}, keywords)
+        self.assertIn({"label": "權杖底材", "kw": "s:.+wand"}, keywords)
+        self.assertIn({"label": "增加物理傷害%（EN）", "kw": "sical d"}, keywords)
+        self.assertIn({"label": "物傷＋攻速複合（EN／OR）", "kw": "d.+cal d|sical d|attack speed"}, keywords)
+        self.assertIn(
+            {"label": "物傷＋攻速複合（OR）", "kw": "附加.*物理傷害|增加.*物理傷害|攻擊速度"},
+            localized_keywords,
+        )
+        self.assertIn(
+            {"label": "力量爆破候選複合（OR）", "kw": "攻擊傷害|攻擊速度|元素攻擊傷害|附加.*(物理|火焰|冰冷|閃電)傷害|暴擊率"},
+            localized_keywords,
+        )
+        self.assertIn({"label": "法術傷害（有權杖專精時再選）", "kw": "法術傷害"}, localized_keywords)
+        all_keywords = keywords + localized_keywords
+        self.assertTrue(all(len(keyword["kw"]) <= 250 for keyword in all_keywords))
+        sample_lines = {
+            "d.+cal d": "Adds 15 to 29 Physical Damage to Attacks",
+            "sical d": "30% increased Physical Damage",
+            "attack speed": "12% increased Attack Speed",
+            "附加.*物理傷害": "附加 15(13-17) 至 29(28-32) 物理傷害",
+            "增加.*物理傷害": "增加 30% 物理傷害",
+            "攻擊速度": "增加 12% 攻擊速度",
+            "攻擊傷害": "增加 10% 攻擊傷害",
+            "元素攻擊傷害": "增加 20% 元素攻擊傷害",
+            "法術傷害": "增加 40% 法術傷害",
+            "暴擊率": "增加 25% 暴擊率",
+            "法杖": "魔性法杖",
+        }
+        for pattern, sample in sample_lines.items():
+            with self.subTest(pattern=pattern):
+                self.assertRegex(sample, re.compile(pattern, re.IGNORECASE))
+        self.assertEqual(
+            {source["url"] for source in filters["sources"]},
+            {
+                "https://poe.re/vendor",
+                "https://github.com/veiset/poe.re",
+                "https://omnilyth.app/leveling/vendor-regex",
+                "https://bobogameguides.com/poe/builds/deadeye-kinetic-blast/",
+                "https://www.poewiki.net/wiki/Kinetic_Blast",
+                "https://www.poewiki.net/wiki/Wand_Mastery",
+            },
+        )
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('data-p1-tab="community">拓荒 Regex</button>', page)
+        self.assertIn('data-kw="Runn|rint"', page)
+        self.assertIn('data-kw="&#34;ll g&#34;"', page)
+        self.assertIn('href="https://poe.re/vendor" target="_blank" rel="noopener noreferrer"', page)
+        self.assertIn("繁中：力量爆破（權杖攻擊）", page)
+        self.assertIn("單獨複製此正則", page)
 
     def test_spreadsheet_reference_articles_load_in_public_category(self):
         games = web_app.load_games(include_strategies=False)

@@ -1,4 +1,82 @@
 {
+  "poe1": {
+    "starter_groups": [
+      {
+        "title": "EN：跑速鞋",
+        "keywords": [
+          { "label": "10% 或 15% 移動速度", "kw": "Runn|rint" }
+        ]
+      },
+      {
+        "title": "EN：生命與抗性",
+        "keywords": [
+          { "label": "生命或抗性（寬鬆初篩）", "kw": "m life|res" }
+        ]
+      },
+      {
+        "title": "EN：+1 技能寶石權杖",
+        "keywords": [
+          { "label": "任意 +1 權杖", "kw": "\"ll g\"" },
+          { "label": "+1 火焰", "kw": "me Sh" },
+          { "label": "+1 冰冷", "kw": "singe" },
+          { "label": "+1 閃電", "kw": "derha" },
+          { "label": "+1 物理", "kw": "Litho" },
+          { "label": "+1 混沌", "kw": "Lord" }
+        ]
+      },
+      {
+        "title": "EN：武器初篩",
+        "keywords": [
+          { "label": "附加物理傷害（EN）", "kw": "d.+cal d" },
+          { "label": "增加物理傷害%（EN）", "kw": "sical d" },
+          { "label": "物傷＋攻速複合（EN／OR）", "kw": "d.+cal d|sical d|attack speed" },
+          { "label": "弓底材", "kw": "s:.+bow" },
+          { "label": "權杖底材", "kw": "s:.+wand" }
+        ]
+      },
+      {
+        "title": "EN：插槽連線",
+        "keywords": [
+          { "label": "4 連", "kw": "-\\w-.-" },
+          { "label": "5 連", "kw": "(-\\w){4}" },
+          { "label": "6 連", "kw": "(-\\w){5}" }
+        ]
+      }
+    ],
+    "localized_groups": [
+      {
+        "title": "繁中：物理傷害與攻速",
+        "keywords": [
+          { "label": "附加物理傷害", "kw": "附加.*物理傷害" },
+          { "label": "增加物理傷害%", "kw": "增加.*物理傷害" },
+          { "label": "物傷＋攻速複合（OR）", "kw": "附加.*物理傷害|增加.*物理傷害|攻擊速度" }
+        ]
+      },
+      {
+        "title": "繁中：力量爆破（權杖攻擊）",
+        "keywords": [
+          { "label": "法杖底材", "kw": "法杖" },
+          { "label": "攻擊傷害", "kw": "攻擊傷害" },
+          { "label": "攻擊速度", "kw": "攻擊速度" },
+          { "label": "元素攻擊傷害", "kw": "元素攻擊傷害" },
+          { "label": "附加物理／元素傷害", "kw": "附加.*(物理|火焰|冰冷|閃電)傷害" },
+          { "label": "暴擊率（暴擊流可選）", "kw": "暴擊率" },
+          { "label": "力量爆破候選複合（OR）", "kw": "攻擊傷害|攻擊速度|元素攻擊傷害|附加.*(物理|火焰|冰冷|閃電)傷害|暴擊率" },
+          { "label": "武器欄直接貼上（力量爆破）", "kw": "攻擊傷害|攻擊速度|元素攻擊傷害|附加.*(物理|火焰|冰冷|閃電)傷害|暴擊率" },
+          { "label": "法術欄直接貼上", "kw": "法術傷害|施放速度|法術暴擊率|法術技能寶石等級" },
+          { "label": "法術傷害（有權杖專精時再選）", "kw": "法術傷害" }
+        ]
+      }
+    ],
+    "sources": [
+      { "label": "poe.re PoE1 Vendor Regex", "url": "https://poe.re/vendor" },
+      { "label": "poe.re 開源專案與正則產生邏輯", "url": "https://github.com/veiset/poe.re" },
+      { "label": "Omnilyth 拓荒商店篩選（跑速／生命／抗性）", "url": "https://omnilyth.app/leveling/vendor-regex" },
+      { "label": "力量爆破權杖流派參考（3.28 快照；3.29 技能有改動）", "url": "https://bobogameguides.com/poe/builds/deadeye-kinetic-blast/" },
+      { "label": "PoE Wiki：力量爆破", "url": "https://www.poewiki.net/wiki/Kinetic_Blast" },
+      { "label": "PoE Wiki：權杖專精", "url": "https://www.poewiki.net/wiki/Wand_Mastery" }
+    ]
+  },
   "poe2": {
     "shop_defaults": [
       "\"bow|mov|[egdl] da.* to a\""
