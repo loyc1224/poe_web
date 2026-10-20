@@ -47,6 +47,14 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 
 `--verify-official-trade` 使用瀏覽器 DOM 產生的 query 呼叫台服 search/fetch，驗證兩顆回報寶石及魔血、獵首、漢恩的蔑視，每件抽查最多三筆公開掛單。寶石核對完整名稱、Lv21、品質20%、腐化；裝備核對 unique 名稱、基底、已鑑定、官方 rarity 與價格單位，保留貼膜狀態。不輸出賣家帳號、不使用登入憑證。它是明確的管理驗證操作，不是網頁 GET 的即時抓價。官方登入／限流／無資料造成受阻時保留錯誤並停止，不能假稱查到正確物品。
 
+poe.ninja economy 快取空行情回歸：
+
+```powershell
+python -m unittest tests.unit.test_economy_cache -v
+```
+
+此測試模擬 PoE1／PoE2 上游回傳 HTTP 200 但沒有行情，確認空結果標為 `unavailable`、既有有效行情不被覆蓋，且先前空快取會觸發重新查詢。fixture 不代表即時聯盟仍有行情；實際聯盟與資料筆數須另以 API 回應核對。
+
 正式策略密碼須已安全放在執行者的環境或 `.env`，且與正式站一致；不得透過聊天傳送或放在命令列參數。報告會遮蔽策略密碼，僅記錄非機密狀態。
 
 ## 功能矩陣
@@ -67,7 +75,7 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 篩選 | POE1 繁中／英文拓荒 regex、原有中文裝備詞綴與 POE2 商店／換界石正則；桌機／手機驗切換、選取、清除、重置 | 按客戶端文字語言選 regex；OR 複合條件單獨複製，不會加入原中文詞綴組合器 |
 | 複製 | 剪貼簿拒絕有錯誤狀態；允許時逐字比對 POE1 中英文物理／攻速與力量爆破 regex、其他組合及匯入正則 | 離線樣本文字確認 regex 可匹配；fixture／DOM 只證明剪貼簿未改寫，不代表所有遊戲詞綴已實機驗過。法術傷害要有適用權杖專精；暴擊率為暴擊配置可選項；無未處理 Promise／pageerror |
 | POE2 參考資料 | 23 條查價連結逐一解析 `?q=` JSON，檢查指定物品 name/type、官方分類、聯盟、排序與 3 插槽條件；23/23 個官方 API search 實際回 200 且有結果，妄想症另 fetch 核對物品身分 | 聯盟於 2026-10-07 驗為「禁忌儀式」；官方 API 回傳最多 100 筆，不代表掛單總數。匯率和 0.5.4 攻略只作快照 |
-| 舊查價頁 | 兩版切換、搜尋、排序、強制刷新參數，以 deterministic fixture 驗 UI | **不代表外部 poe.ninja 真實刷新或價格正確性已驗證** |
+| 舊查價頁 | 兩版切換、搜尋、排序、強制刷新參數，以 deterministic fixture 驗 UI；`test_economy_cache` 覆蓋空行情標記及最後有效快取保留 | **不代表外部 poe.ninja 真實刷新或價格正確性已驗證**；已退役聯盟可合法沒有行情 |
 | OAuth／倉庫 | OAuth fixture 驗 PKCE／scope／token 隔離；session fixture 驗 cookie 格式、台服 endpoint、頁籤、401／403／429、session 不外洩、加密保存與斷開清除 | Fixture 不是真實帳號；OAuth 需本站 client；session roundtrip 需玩家自行輸入後才可列真實 PASS |
 | 新倉庫統計 | OAuth／session-connected 與未登入狀態、分頁／物品選取、搜尋排序、分類占比、歷史圖、空分頁、圖片解碼與 JS 錯誤 | Fixture 不是真實帳號資產；session endpoint 非官方文件 API，尚無真實 session roundtrip 證據時標 BLOCKED |
 | 連結帳號 | OAuth 設定完整時直達官方；缺 client 時提供 session-cookie 對話框；密碼欄遮蔽、風險未確認不可提交、確認後同步、斷開清除；OAuth PKCE／scope／callback regression | POESESSID 是完整登入 session，需醒目揭露；fixture 不得冒充真實連線；session endpoint 不保證穩定 |
@@ -112,6 +120,7 @@ python scripts/validate_site.py --verify-official-trade --report "$env:TEMP\poe-
 | 2026-10-20 | PoE1 拓荒面板將英文 `d.+cal d` 用於繁中客戶端，實測不會匹配「附加 … 物理傷害」；複合也漏物理百分比與攻速 | 按客戶端語言分組；新增繁中附加物理、增加物理%、攻速，以及 Kinetic Blast 法杖攻擊候選詞；離線匹配中英樣例、整合測試與桌機／手機剪貼簿逐字驗收。實機各詞綴仍待玩家確認 |
 | 2026-10-20 | 原外部閃現打擊攻略不含使用者實跑的 1～38 路線、印記／狂怒球續航與火抗回血觀察，不能把兩者合成同一套配置 | 新增獨立實跑文章，保留玩家提供描述，將版本／聯盟、具體狂怒球來源與「力量之井」正式節點名稱標為待補；整合測試確認兩篇各自載入 |
 | 2026-10-20 | 玩家提供 PoEDB 角色頁；頁面當下技能清單與拓荒實跑路線並非同一資料集 | 將 52 級凡事相信／咒海 3.29 自力快照獨立列示，嵌入 PoEDB 對應技能 CDN 圖示副本；離線驗本地圖片回應，桌機／手機驗解碼，不從快照推斷天賦／裝備或逐級連線 |
+| 2026-10-20 | poe.ninja 已退役聯盟仍回 HTTP 200、空 `lines`；舊程式把它標為 `ok` 並覆蓋過期但有效的快取，頁面因此只剩空表 | PoE1／PoE2 空結果標為 `unavailable` 並附原因；不寫入空快取，無新行情時保留最後有效價格；`tests.unit.test_economy_cache` 覆蓋空上游、近期空快取與兩遊戲路徑。當日 API 抽查 PoE2 Standard 57 筆有價資料、Runes of Aldur 0 筆；這是即時快照，不代表之後行情 |
 | 2026-10-06 | economy／台服行情模組與測試平鋪，新增功能難依責任定位 | 模組歸類至 `monitor/economy/`、`monitor/tw_pricer/`；測試分 `tests/unit/`、`tests/integration/`；全量 unittest discovery 48 PASS、舊路徑搜尋無殘留，桌機／手機各 10 項 PASS |
 | 2026-10-06 | Web根目錄散落部署／更新／驗證腳本與多份操作Markdown | 腳本移至 `scripts/`、專用手冊移至 `docs/`；修正 CI／命令／匯入根路徑；CLI `--help`、PowerShell parser、完整測試與瀏覽器矩陣做提交前驗證 |
 | 2026-10-06 | 架構文件與目錄整理提交後依使用者要求部署 | commit `d784208` 部署至 `poe-python-web-00044-gd4`，Ready／100%流量；48 tests PASS，正式站桌機／手機20 checks PASS，真實 OAuth 各 1 BLOCKED；readiness PASS，未修改排程 |
@@ -179,3 +188,4 @@ OAuth／倉庫：PASS / FAIL / BLOCKED，真實或 fixture
 | 1.2.2 | 2026-10-20 | 新增 POE1 中英 regex 分組、力量爆破權杖搜尋條件、英中樣本文字與桌機／手機複製驗收；標明法術傷害專精條件及未做全量實機驗證。 |
 | 1.2.3 | 2026-10-20 | 增加武器／法術可直接複製複合 regex，並加入與外部攻略分開的使用者實跑閃現打擊文章驗收。 |
 | 1.2.4 | 2026-10-20 | 擴充實跑閃打文章為 PoEDB 角色快照，驗角色頁連結與本地技能圖示 HTTP 回應，明確分隔快照與實跑路線。 |
+| 1.2.5 | 2026-10-20 | 修正 poe.ninja 空行情回應覆蓋有效快取；新增 PoE1／PoE2 快取回歸與驗證說明，記錄退役聯盟沒有行情的明確狀態。 |

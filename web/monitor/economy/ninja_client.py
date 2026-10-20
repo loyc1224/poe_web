@@ -41,9 +41,37 @@ def _load_cache(key: str, ttl: int) -> dict | None:
         return json.load(f)
 
 
+def _load_stale_cache(key: str) -> dict | None:
+    path = _cache_path(key)
+    if not path.exists():
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def _save_cache(key: str, data: dict) -> None:
     with open(_cache_path(key), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+
+
+def _save_or_keep_valid_cache(key: str, result: dict, stale_cache: dict | None) -> dict:
+    if result["items"]:
+        _save_cache(key, result)
+        return result
+
+    result["status"] = "unavailable"
+    if not result["errors"]:
+        result["errors"] = ["上游目前未提供有效行情"]
+    if stale_cache and stale_cache.get("items"):
+        fallback = dict(stale_cache)
+        fallback["status"] = "unavailable"
+        fallback["errors"] = result["errors"]
+        fallback["stale"] = True
+        return fallback
+    return result
 
 
 def _get(url: str, params: dict) -> dict:
@@ -59,8 +87,9 @@ def fetch_economy(league: str = LEAGUE_NAME, force: bool = False) -> dict:
     cache_key = f"economy_{league}"
     if not force:
         cached = _load_cache(cache_key, CACHE_TTL["economy"])
-        if cached:
+        if cached and cached.get("items"):
             return cached
+    stale_cache = _load_stale_cache(cache_key)
 
     items: list[dict] = []
     errors: list[str] = []
@@ -129,8 +158,7 @@ def fetch_economy(league: str = LEAGUE_NAME, force: bool = False) -> dict:
         "status": "ok" if not errors else ("unavailable" if not items else "partial"),
         "errors": errors,
     }
-    _save_cache(cache_key, result)
-    return result
+    return _save_or_keep_valid_cache(cache_key, result, stale_cache)
 
 
 def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
@@ -138,8 +166,9 @@ def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
     cache_key = f"poe1_economy_{league}"
     if not force:
         cached = _load_cache(cache_key, CACHE_TTL["economy"])
-        if cached:
+        if cached and cached.get("items"):
             return cached
+    stale_cache = _load_stale_cache(cache_key)
 
     items: list[dict] = []
     errors: list[str] = []
@@ -206,82 +235,4 @@ def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
         "status":     "ok" if not errors else ("unavailable" if not items else "partial"),
         "errors":     errors,
     }
-    _save_cache(cache_key, result)
-    return result
-
-
-def fetch_poe1_economy(league: str = POE1_LEAGUE, force: bool = False) -> dict:
-    """抓取 poe.ninja PoE1 economy（Currency Exchange API，chaos 為基準）。"""
-    cache_key = f"poe1_economy_{league}"
-    if not force:
-        cached = _load_cache(cache_key, CACHE_TTL["economy"])
-        if cached:
-            return cached
-
-    items: list[dict] = []
-    errors: list[str] = []
-
-    def _fetch_type(item_type: str, label: str):
-        raw = _get(_BASE_ECONOMY_POE1, {"league": league, "type": item_type})
-        id_to_item: dict[str, dict] = {}
-        for entry in (raw.get("items") or []):
-            if isinstance(entry, dict) and entry.get("id"):
-                id_to_item[entry["id"]] = {
-                    "name":  entry.get("name", entry["id"]),
-                    "image": entry.get("image", ""),
-                }
-        result_items = []
-        for line in (raw.get("lines") or []):
-            item_id   = line.get("id", "")
-            item_meta = id_to_item.get(item_id, {})
-            name      = item_meta.get("name", item_id)
-            icon      = item_meta.get("image", "")
-            spark     = line.get("sparkline") or {}
-            spark_d   = spark.get("data") or []
-            chaos_val = line.get("primaryValue") or 0
-            change_1d = 0.0
-            valid = [v for v in spark_d if v is not None]
-            if len(valid) >= 2:
-                prev, curr = valid[-2], valid[-1]
-                if prev and curr:
-                    change_1d = round((curr - prev) / abs(prev) * 100, 1)
-            result_items.append({
-                "name":      name,
-                "zh":        ITEM_ZH.get(item_id, ""),
-                "type":      item_type,
-                "label":     label,
-                "chaos":     round(chaos_val, 2),
-                "change_1d": change_1d,
-                "change_7d": round(spark.get("totalChange") or 0.0, 1),
-                "volume":    round(line.get("volumePrimaryValue") or 0, 2),
-                "icon":      icon,
-            })
-        return result_items, None
-
-    with ThreadPoolExecutor(max_workers=len(POE1_ECONOMY_TYPES)) as pool:
-        futures = {
-            pool.submit(_fetch_type, item_type, label): item_type
-            for item_type, label in POE1_ECONOMY_TYPES
-        }
-        for fut in futures:
-            item_type = futures[fut]
-            try:
-                result_items, _ = fut.result()
-                items.extend(result_items)
-            except requests.HTTPError as exc:
-                code = exc.response.status_code if exc.response is not None else 0
-                errors.append(f"{item_type}: {'League not found' if code == 404 else f'HTTP {code}'}")
-            except Exception as exc:
-                errors.append(f"{item_type}: {exc}")
-
-    items.sort(key=lambda x: x["change_1d"], reverse=True)
-
-    result = {
-        "items":      items,
-        "fetched_at": time.time(),
-        "league":     league,
-        "status":     "ok" if not errors else ("unavailable" if not items else "partial"),
-        "errors":     errors,
-    }
-    _save_cache(cache_key, result)
-    return result
+    return _save_or_keep_valid_cache(cache_key, result, stale_cache)
